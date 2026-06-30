@@ -9,7 +9,9 @@ export const GAME_MODES: Record<number, ModeConfig> = {
 
 // 找出人類（新版）：AI 多數、真人少數，大家一起揪出偽裝的真人
 export const GAME_MODES_FIND_HUMAN: Record<number, ModeConfig> = {
-  3: { playerCount: 3, humanCount: 1, aiCount: 2, totalRounds: 2, variant: 'find_human' },
+  // 3 人場：只有 1 回合 —— AI 抓出人類就贏，沒抓到（投到 AI）人類就活到最後獲勝
+  3: { playerCount: 3, humanCount: 1, aiCount: 2, totalRounds: 1, variant: 'find_human' },
+  // 5 人場：AI 要把 2 個真人都投出才贏
   5: { playerCount: 5, humanCount: 2, aiCount: 3, totalRounds: 3, variant: 'find_human' },
 }
 

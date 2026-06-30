@@ -82,6 +82,9 @@ describe('找出人類模式設定', () => {
     expect(GAME_MODES_FIND_HUMAN[5].humanCount).toBe(2)
     expect(GAME_MODES_FIND_HUMAN[5].aiCount).toBe(3)
   })
+  it('3 人場只有 1 回合', () => {
+    expect(GAME_MODES_FIND_HUMAN[3].totalRounds).toBe(1)
+  })
   it('getMode 依玩法取設定', () => {
     expect(getMode('find_ai', 6)).toBe(GAME_MODES[6])
     expect(getMode('find_human', 3)).toBe(GAME_MODES_FIND_HUMAN[3])
@@ -114,5 +117,15 @@ describe('勝負判定 evaluateWin', () => {
   it('找出人類：未結束回傳 null', () => {
     expect(evaluateWin({ variant: 'find_human', aliveAI: 2, aliveHumans: 1, round: 1, totalRounds: 2 }))
       .toBeNull()
+  })
+
+  // 3 人場單回合
+  it('找出人類 3人場：R1 抓到人類 → AI 勝', () => {
+    expect(evaluateWin({ variant: 'find_human', aliveAI: 2, aliveHumans: 0, round: 1, totalRounds: 1 }))
+      .toEqual({ result: 'ai_wins', reason: 'all_humans_found' })
+  })
+  it('找出人類 3人場：R1 投到 AI、人類存活 → 人類勝', () => {
+    expect(evaluateWin({ variant: 'find_human', aliveAI: 1, aliveHumans: 1, round: 1, totalRounds: 1 }))
+      .toEqual({ result: 'humans_win', reason: 'rounds_exhausted' })
   })
 })

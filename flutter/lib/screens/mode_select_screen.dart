@@ -22,7 +22,7 @@ class _ModeSelectScreenState extends State<ModeSelectScreen> {
   ];
   // 找出人類（AI 多數）
   static const _modesFindHuman = [
-    {'count': 3, 'human': 1, 'ai': 2, 'rounds': 2, 'mins': '~5 分', 'recommended': false},
+    {'count': 3, 'human': 1, 'ai': 2, 'rounds': 1, 'mins': '~3 分', 'recommended': false},
     {'count': 5, 'human': 2, 'ai': 3, 'rounds': 3, 'mins': '~9 分', 'recommended': true},
   ];
 
