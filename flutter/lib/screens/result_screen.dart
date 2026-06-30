@@ -111,6 +111,14 @@ class ResultScreen extends StatelessWidget {
                                     style: const TextStyle(
                                         color: AppColors.textPrimary,
                                         fontWeight: FontWeight.w500)),
+                                if (p.lobbyName != null && p.lobbyName != p.name)
+                                  Text(
+                                    '原本是 ${p.lobbyName}',
+                                    style: const TextStyle(
+                                      color: AppColors.textMuted,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 Text(
                                   isAI ? 'Claude AI' : '真人玩家',
                                   style: TextStyle(

@@ -8,6 +8,8 @@ export interface ModeConfig {
 export interface Player {
   id: string
   name: string
+  lobbyName: string
+  gameName?: string
   isAI?: boolean        // 只在 game_over 時揭露
   isEliminated: boolean
   avatarIndex: number   // 進房順序決定，0–7

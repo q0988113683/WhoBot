@@ -17,7 +17,14 @@ function makeRoom(mode: 4 | 6 | 8): Room {
 }
 
 function makePlayer(id: string, isEliminated = false): Player {
-  return { id, name: `玩家 ${id}`, isEliminated, avatarIndex: 0, isHost: false }
+  return {
+    id,
+    name: `玩家 ${id}`,
+    lobbyName: `測試玩家 ${id}`,
+    isEliminated,
+    avatarIndex: 0,
+    isHost: false,
+  }
 }
 
 describe('GameConfig', () => {

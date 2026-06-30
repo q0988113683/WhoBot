@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 class PlayerModel {
   final String id;
   final String name;
+  final String? lobbyName;
+  final String? gameName;
   final int avatarIndex;
   final bool isEliminated;
   final bool isHost;
@@ -11,6 +13,8 @@ class PlayerModel {
   const PlayerModel({
     required this.id,
     required this.name,
+    this.lobbyName,
+    this.gameName,
     required this.avatarIndex,
     required this.isEliminated,
     required this.isHost,
@@ -19,8 +23,10 @@ class PlayerModel {
 
   factory PlayerModel.fromJson(Map<String, dynamic> j) => PlayerModel(
         id: j['id'] as String,
-        name: j['name'] as String,
-        avatarIndex: j['avatarIndex'] as int,
+        name: (j['gameName'] ?? j['lobbyName'] ?? j['name']) as String,
+        lobbyName: j['lobbyName'] as String?,
+        gameName: j['gameName'] as String?,
+        avatarIndex: j['avatarIndex'] as int? ?? 0,
         isEliminated: j['isEliminated'] as bool? ?? false,
         isHost: j['isHost'] as bool? ?? false,
         isAI: j['isAI'] as bool?,
@@ -29,6 +35,8 @@ class PlayerModel {
   PlayerModel copyWith({bool? isEliminated, bool? isAI}) => PlayerModel(
         id: id,
         name: name,
+        lobbyName: lobbyName,
+        gameName: gameName,
         avatarIndex: avatarIndex,
         isEliminated: isEliminated ?? this.isEliminated,
         isHost: isHost,
@@ -56,10 +64,28 @@ class MessageModel {
   factory MessageModel.fromJson(Map<String, dynamic> j) => MessageModel(
         id: j['id'] as String,
         senderId: j['senderId'] as String,
-        senderName: j['senderName'] as String,
+        senderName: (j['senderGameName'] ?? j['senderName']) as String,
         senderAvatarIndex: j['senderAvatarIndex'] as int,
         content: j['content'] as String,
         timestamp: j['timestamp'] as int,
+      );
+}
+
+class HostMessageModel {
+  final String text;
+  final String kind;
+  final bool emphasis;
+
+  const HostMessageModel({
+    required this.text,
+    required this.kind,
+    required this.emphasis,
+  });
+
+  factory HostMessageModel.fromJson(Map<String, dynamic> j) => HostMessageModel(
+        text: j['text'] as String,
+        kind: j['kind'] as String? ?? 'intro',
+        emphasis: j['emphasis'] as bool? ?? false,
       );
 }
 
@@ -97,10 +123,15 @@ class GameState extends ChangeNotifier {
   String roomCode = '';
   ModeConfig? mode;
   List<PlayerModel> lobbyPlayers = [];
+  int lobbyJoined = 0;
+  int lobbyHumanCount = 0;
+  bool lobbyIsFull = false;
+  bool canStartGame = false;
 
   // 遊戲中
   List<PlayerModel> players = [];
   List<MessageModel> messages = [];
+  HostMessageModel? hostMessage;
   int round = 1;
   int totalRounds = 1;
   int aiTotal = 1;
@@ -126,7 +157,12 @@ class GameState extends ChangeNotifier {
   GamePhase screen = GamePhase.home;
 
   void regenNickname() {
-    nickname = _genNickname();
+    setNickname(_genNickname());
+  }
+
+  void setNickname(String value) {
+    final trimmed = value.trim();
+    nickname = trimmed.length > 10 ? trimmed.substring(0, 10) : trimmed;
     notifyListeners();
   }
 
@@ -146,8 +182,13 @@ class GameState extends ChangeNotifier {
     roomCode = '';
     mode = null;
     lobbyPlayers = [];
+    lobbyJoined = 0;
+    lobbyHumanCount = 0;
+    lobbyIsFull = false;
+    canStartGame = false;
     players = [];
     messages = [];
+    hostMessage = null;
     round = 1;
     voteCounts = {};
     myVoteTargetId = null;

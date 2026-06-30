@@ -10,6 +10,7 @@ class AppColors {
   static const textMuted = Color(0xFF555566);
   static const danger = Color(0xFFEF4444);
   static const success = Color(0xFF22C55E);
+  static const warning = Color(0xFFF59E0B);
   static const border = Color(0xFF2A2A35);
 
   static const avatarPalette = [

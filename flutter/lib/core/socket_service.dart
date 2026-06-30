@@ -24,7 +24,19 @@ class SocketService {
           .map((p) => PlayerModel.fromJson(Map<String, dynamic>.from(p as Map)))
           .toList();
       state.mode = ModeConfig.fromJson(Map<String, dynamic>.from(d['mode'] as Map));
+      state.lobbyJoined = d['joined'] as int? ?? state.lobbyPlayers.length;
+      state.lobbyHumanCount =
+          d['humanCount'] as int? ?? state.mode?.humanCount ?? state.lobbyPlayers.length;
+      state.lobbyIsFull = d['isFull'] as bool? ??
+          state.lobbyJoined >= (state.mode?.humanCount ?? state.lobbyPlayers.length);
       state.setScreen(GamePhase.lobby);
+    });
+
+    _socket.on('lobby_ready', (data) {
+      final d = Map<String, dynamic>.from(data as Map);
+      state.canStartGame = d['canStart'] as bool? ?? false;
+      state.lobbyIsFull = true;
+      state.notify();
     });
 
     _socket.on('room_created', (data) {
@@ -39,18 +51,26 @@ class SocketService {
       state.players = (d['players'] as List)
           .map((p) => PlayerModel.fromJson(Map<String, dynamic>.from(p as Map)))
           .toList();
+      state.mySocketId = d['yourId'] as String? ?? state.mySocketId;
       state.mode = ModeConfig.fromJson(Map<String, dynamic>.from(d['mode'] as Map));
       state.round = d['round'] as int;
       state.totalRounds = state.mode!.totalRounds;
       state.aiTotal = state.mode!.aiCount;
       state.aiRemaining = state.mode!.aiCount;
       state.messages = [];
+      state.hostMessage = null;
       state.setScreen(GamePhase.chat);
     });
 
     _socket.on('new_message', (data) {
       final d = Map<String, dynamic>.from(data as Map);
       state.messages = [...state.messages, MessageModel.fromJson(d)];
+      state.notify();
+    });
+
+    _socket.on('host_message', (data) {
+      final d = Map<String, dynamic>.from(data as Map);
+      state.hostMessage = HostMessageModel.fromJson(d);
       state.notify();
     });
 
@@ -110,15 +130,19 @@ class SocketService {
   }
 
   void createRoom(String nickname, int mode) {
-    _socket.emit('create_room', {'nickname': nickname, 'mode': mode});
+    _socket.emit('create_room', {'name': nickname, 'nickname': nickname, 'mode': mode});
   }
 
   void joinRoom(String nickname, String roomCode) {
-    _socket.emit('join_room', {'nickname': nickname, 'roomCode': roomCode});
+    _socket.emit('join_room', {'name': nickname, 'nickname': nickname, 'roomCode': roomCode});
   }
 
   void quickMatch(String nickname, int mode) {
-    _socket.emit('quick_match', {'nickname': nickname, 'mode': mode});
+    _socket.emit('quick_match', {'name': nickname, 'nickname': nickname, 'mode': mode});
+  }
+
+  void startGame() {
+    _socket.emit('start_game');
   }
 
   void sendMessage(String content) {

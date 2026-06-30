@@ -26,6 +26,7 @@ export class RoomManager {
     const player: Player = {
       id: socketId,
       name: nickname,
+      lobbyName: nickname,
       isEliminated: false,
       avatarIndex: 0,
       isHost: true,
@@ -49,12 +50,14 @@ export class RoomManager {
     const room = this.rooms.get(code.toUpperCase())
     if (!room || room.phase !== 'waiting') return null
     if (room.players.find(p => p.id === socketId)) return room
+    if (room.players.length >= room.mode.humanCount) return null
 
     const player: Player = {
       id: socketId,
       name: nickname,
+      lobbyName: nickname,
       isEliminated: false,
-      avatarIndex: room.players.length,  // 進房順序決定 avatarIndex
+      avatarIndex: 0,
       isHost: false,
     }
     room.players.push(player)
@@ -68,7 +71,7 @@ export class RoomManager {
       if (
         room.phase === 'waiting' &&
         room.mode.playerCount === mode &&
-        room.players.length < room.mode.playerCount
+        room.players.length < room.mode.humanCount
       ) {
         this.joinRoom(socketId, nickname, room.code)
         return room
@@ -78,19 +81,20 @@ export class RoomManager {
     return this.createRoom(socketId, nickname, mode)
   }
 
-  // 判斷房間是否人滿可開始
-  checkAndStart(room: Room, io: Server): void {
-    if (room.players.length < room.mode.playerCount) return
-    this.startGame(room, io)
+  isReady(room: Room): boolean {
+    return room.players.length >= room.mode.humanCount
   }
 
-  private startGame(room: Room, io: Server): void {
+  startGame(room: Room, io: Server, hostSocketId: string): boolean {
+    const host = room.players.find(p => p.id === hostSocketId && p.isHost)
+    if (!host || room.phase !== 'waiting' || !this.isReady(room)) return false
+
     // 注入 AI 玩家
     for (let i = 0; i < room.mode.aiCount; i++) {
       const aiId = uuidv4()
       const num = 1000 + Math.floor(Math.random() * 9000)
       const aiName = `玩家 ${num}`
-      const avatarIndex = room.players.length  // AI 也佔一個 index
+      const avatarIndex = 0
       const aiPlayer = new AIPlayer({
         id: aiId,
         name: aiName,
@@ -101,6 +105,7 @@ export class RoomManager {
       const aiPlayerRecord: Player = {
         id: aiId,
         name: aiName,
+        lobbyName: aiName,
         isEliminated: false,
         avatarIndex,
         isHost: false,
@@ -110,17 +115,32 @@ export class RoomManager {
       this.engine.aiPlayers.set(aiId, aiPlayer)
     }
 
-    // 傳給前端的 players 不含 isAI
-    const publicPlayers = room.players.map(({ isAI: _isAI, ...p }) => p)
-
-    io.to(room.code).emit(EVENTS.GAME_START, {
-      roomId: room.code,
-      players: publicPlayers,
-      mode: room.mode,
-      round: 1,
+    this.shuffle(room.players)
+    room.players.forEach((p, idx) => {
+      const gameName = `玩家 ${idx + 1}`
+      p.gameName = gameName
+      p.name = gameName
+      p.avatarIndex = idx
+      if (room.aiPlayerIds.includes(p.id)) {
+        this.engine.aiPlayers.get(p.id)?.anonymize(gameName, idx)
+      }
     })
 
+    // 傳給前端的 players 不含 isAI 與 lobbyName，避免遊戲中洩漏自訂名稱。
+    const publicPlayers = room.players.map(({ isAI: _isAI, lobbyName: _lobbyName, ...p }) => p)
+
+    for (const player of room.players) {
+      io.to(player.id).emit(EVENTS.GAME_START, {
+        roomId: room.code,
+        players: publicPlayers,
+        yourId: player.id,
+        mode: room.mode,
+        round: 1,
+      })
+    }
+
     this.engine.startChat(room)
+    return true
   }
 
   getRoomBySocket(socketId: string): Room | null {
@@ -144,11 +164,14 @@ export class RoomManager {
   }
 
   private generateCode(): string {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-    let code = ''
-    for (let i = 0; i < 6; i++) {
-      code += chars[Math.floor(Math.random() * chars.length)]
-    }
+    const code = `${Math.floor(1000 + Math.random() * 9000)}`
     return this.rooms.has(code) ? this.generateCode() : code
+  }
+
+  private shuffle<T>(items: T[]): void {
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[items[i], items[j]] = [items[j], items[i]]
+    }
   }
 }

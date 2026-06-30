@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/constants.dart';
 import '../core/game_state.dart';
-import '../widgets/player_avatar.dart';
+import '../core/socket_service.dart';
 
 class LobbyScreen extends StatelessWidget {
   const LobbyScreen({super.key});
@@ -12,28 +12,57 @@ class LobbyScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<GameState>();
     final players = state.lobbyPlayers;
-    final total = state.mode?.playerCount ?? 4;
-    final myId = state.mySocketId;
+    final mode = state.mode;
+    final humanCount = state.lobbyHumanCount > 0
+        ? state.lobbyHumanCount
+        : mode?.humanCount ?? players.length;
+    final joined = state.lobbyJoined > 0 ? state.lobbyJoined : players.length;
+    final isHost = players.any((p) => p.id == state.mySocketId && p.isHost);
+    final canStart = isHost && joined >= humanCount;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('等待玩家',
-                  style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              const Text('把代碼分享給朋友一起玩',
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
-              const SizedBox(height: 24),
-
-              // 房間代碼
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '等待房間',
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          mode == null
+                              ? '把代碼分享給朋友'
+                              : '${mode.playerCount} 人局・等待 $humanCount 位真人',
+                          style: const TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => state.reset(),
+                    icon: const Icon(Icons.close, color: AppColors.textMuted),
+                    tooltip: '離開',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
               GestureDetector(
                 onTap: () {
                   Clipboard.setData(ClipboardData(text: state.roomCode));
@@ -43,81 +72,131 @@ class LobbyScreen extends StatelessWidget {
                 },
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                        color: AppColors.primary.withAlpha(((0.4)*255).round()),
-                        style: BorderStyle.solid),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.primary.withAlpha(115)),
                   ),
-                  child: Column(
+                  child: Row(
                     children: [
-                      const Text('房間代碼',
-                          style: TextStyle(
-                              color: AppColors.textMuted, fontSize: 12)),
-                      const SizedBox(height: 8),
-                      Text(
-                        state.roomCode,
-                        style: const TextStyle(
-                          color: AppColors.primaryLight,
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 6,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              '房間代碼',
+                              style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              state.roomCode,
+                              style: const TextStyle(
+                                color: AppColors.primaryLight,
+                                fontSize: 32,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 4,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(Icons.copy, color: AppColors.textMuted, size: 14),
-                          SizedBox(width: 4),
-                          Text('點擊複製',
-                              style: TextStyle(
-                                  color: AppColors.textMuted, fontSize: 12)),
-                        ],
-                      ),
+                      const Icon(Icons.copy, color: AppColors.textMuted),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-
-              Text('已加入 ${players.length} / $total 人...',
-                  style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500)),
-              const SizedBox(height: 16),
-
-              // 玩家格子
-              Expanded(
-                child: GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 0.9,
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: humanCount == 0 ? 0 : joined / humanCount,
+                        minHeight: 8,
+                        backgroundColor: AppColors.surfaceLight,
+                        valueColor: const AlwaysStoppedAnimation(AppColors.success),
+                      ),
+                    ),
                   ),
-                  itemCount: total,
+                  const SizedBox(width: 12),
+                  Text(
+                    '$joined / $humanCount',
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: humanCount,
                   itemBuilder: (_, i) {
-                    if (i < players.length) {
-                      final p = players[i];
-                      final isMe = p.id == myId;
-                      return _PlayerSlot(player: p, isMe: isMe);
-                    }
-                    return _EmptySlot();
+                    if (i >= players.length) return _EmptyHumanSlot(index: i + 1);
+                    final p = players[i];
+                    final isMe = p.id == state.mySocketId;
+                    return _LobbyPlayerTile(player: p, isMe: isMe);
                   },
                 ),
               ),
-
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.visibility_off_outlined,
+                      color: AppColors.primaryLight,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        canStart
+                            ? '真人到齊了。開始後系統會補入 ${mode?.aiCount ?? 0} 個 AI 並匿名排序。'
+                            : joined >= humanCount
+                                ? '等待房主開始遊戲。'
+                                : 'AI 不佔大廳名額，開始後才會加入。',
+                        style: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 12,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 12),
-              const Center(
-                child: Text(
-                  '進房順序決定顏色：藍→粉→綠→橙→紫→紅\n每人專屬，整局不撞色',
-                  textAlign: TextAlign.center,
-                  style:
-                      TextStyle(color: AppColors.textMuted, fontSize: 11),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: canStart ? AppColors.primary : AppColors.surfaceLight,
+                    foregroundColor: Colors.white,
+                    disabledForegroundColor: AppColors.textMuted,
+                    disabledBackgroundColor: AppColors.surfaceLight,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: canStart
+                      ? () => context.read<SocketService>().startGame()
+                      : null,
+                  icon: const Icon(Icons.play_arrow, size: 22),
+                  label: Text(
+                    isHost ? '開始遊戲' : '等待房主開始',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
                 ),
               ),
             ],
@@ -128,64 +207,111 @@ class LobbyScreen extends StatelessWidget {
   }
 }
 
-class _PlayerSlot extends StatelessWidget {
+class _LobbyPlayerTile extends StatelessWidget {
   final PlayerModel player;
   final bool isMe;
 
-  const _PlayerSlot({required this.player, required this.isMe});
+  const _LobbyPlayerTile({required this.player, required this.isMe});
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: isMe
-            ? Border.all(color: AppColors.primary, width: 2)
-            : Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isMe ? AppColors.primary : AppColors.border,
+          width: isMe ? 2 : 1,
+        ),
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Row(
         children: [
-          PlayerAvatar(
-            avatarIndex: player.avatarIndex,
-            label: avatarLabel(player.name, isMe),
-            size: 48,
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: AppColors.surfaceLight,
+            child: Icon(
+              player.isHost ? Icons.key : Icons.person_outline,
+              color: player.isHost ? AppColors.warning : AppColors.textMuted,
+              size: 19,
+            ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            player.name,
-            style: const TextStyle(
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              player.lobbyName ?? player.name,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
                 color: AppColors.textPrimary,
-                fontSize: 12,
-                fontWeight: FontWeight.w500),
-            overflow: TextOverflow.ellipsis,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
-          if (isMe)
-            const Text('你',
-                style:
-                    TextStyle(color: AppColors.primaryLight, fontSize: 11)),
+          if (isMe) const _SmallBadge(label: '你'),
+          if (player.isHost) const SizedBox(width: 6),
+          if (player.isHost) const _SmallBadge(label: '房主'),
         ],
       ),
     );
   }
 }
 
-class _EmptySlot extends StatelessWidget {
+class _EmptyHumanSlot extends StatelessWidget {
+  final int index;
+
+  const _EmptyHumanSlot({required this.index});
+
   @override
   Widget build(BuildContext context) {
     return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.border,
-          style: BorderStyle.solid,
-        ),
+        color: AppColors.surface.withAlpha(150),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
       ),
-      child: const Center(
-        child: Text('···',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 18)),
+      child: Row(
+        children: [
+          const CircleAvatar(
+            radius: 20,
+            backgroundColor: AppColors.surfaceLight,
+            child: Icon(Icons.person_add_alt_1, color: AppColors.textMuted, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            '等待真人 $index',
+            style: const TextStyle(color: AppColors.textMuted, fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SmallBadge extends StatelessWidget {
+  final String label;
+
+  const _SmallBadge({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withAlpha(35),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.primary.withAlpha(90)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: AppColors.primaryLight,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

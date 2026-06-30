@@ -6,8 +6,8 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export class AIPlayer {
   readonly id: string
-  readonly name: string
-  readonly avatarIndex: number
+  name: string
+  avatarIndex: number
   private systemPrompt: string
   private chatSchedule?: ReturnType<typeof setTimeout>
 
@@ -26,6 +26,11 @@ export class AIPlayer {
       aiCount: params.aiCount,
       nickname: params.name,
     })
+  }
+
+  anonymize(name: string, avatarIndex: number): void {
+    this.name = name
+    this.avatarIndex = avatarIndex
   }
 
   // 排程在回合聊天期間隨機發 3–6 則訊息

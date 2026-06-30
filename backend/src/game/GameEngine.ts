@@ -5,6 +5,7 @@ import { CHAT_DURATION, VOTE_DURATION, RESULT_DURATION } from './GameConfig'
 import { VoteManager } from './VoteManager'
 import { EVENTS } from '../events/SocketEvents'
 import { AIPlayer } from '../ai/AIPlayer'
+import { HostMessages } from './HostMessages'
 
 export class GameEngine {
   private io: Server
@@ -22,10 +23,24 @@ export class GameEngine {
     let secondsLeft = CHAT_DURATION
 
     this.io.to(room.code).emit(EVENTS.TIMER_UPDATE, { phase: 'chat', secondsLeft })
+    this.io.to(room.code).emit(EVENTS.HOST_MESSAGE, {
+      text: room.round === 1
+        ? HostMessages.gameStart(room.mode)
+        : HostMessages.roundStart(room.round),
+      kind: 'intro',
+      emphasis: room.round === 1,
+    })
 
     room.timerInterval = setInterval(() => {
       secondsLeft--
       this.io.to(room.code).emit(EVENTS.TIMER_UPDATE, { phase: 'chat', secondsLeft })
+      if (secondsLeft === 30) {
+        this.io.to(room.code).emit(EVENTS.HOST_MESSAGE, {
+          text: HostMessages.chatTimeWarning(),
+          kind: 'warning',
+          emphasis: true,
+        })
+      }
       if (secondsLeft <= 0) {
         clearInterval(room.timerInterval)
         this.startVote(room)
@@ -41,6 +56,7 @@ export class GameEngine {
           id: crypto.randomUUID(),
           senderId: ai.id,
           senderName: ai.name,
+          senderGameName: ai.name,
           senderAvatarIndex: ai.avatarIndex,
           content,
           timestamp: Date.now(),
@@ -66,6 +82,11 @@ export class GameEngine {
       totalRounds: room.mode.totalRounds,
       timeLimit: VOTE_DURATION,
     })
+    this.io.to(room.code).emit(EVENTS.HOST_MESSAGE, {
+      text: HostMessages.voteStart(room.round, room.mode.totalRounds),
+      kind: 'vote_start',
+      emphasis: true,
+    })
     this.io.to(room.code).emit(EVENTS.TIMER_UPDATE, { phase: 'vote', secondsLeft })
 
     // AI 投票
@@ -89,6 +110,13 @@ export class GameEngine {
     room.timerInterval = setInterval(() => {
       secondsLeft--
       this.io.to(room.code).emit(EVENTS.TIMER_UPDATE, { phase: 'vote', secondsLeft })
+      if (secondsLeft === 10) {
+        this.io.to(room.code).emit(EVENTS.HOST_MESSAGE, {
+          text: HostMessages.voteTimeWarning(),
+          kind: 'warning',
+          emphasis: true,
+        })
+      }
       if (secondsLeft <= 0) {
         clearInterval(room.timerInterval)
         this.resolveVote(room)
@@ -124,6 +152,17 @@ export class GameEngine {
       aiRemaining: aliveAI.length,
       aiTotal: room.mode.aiCount,
     })
+    if (eliminated) {
+      this.io.to(room.code).emit(EVENTS.HOST_MESSAGE, {
+        text: HostMessages.roundResult(
+          eliminated.name,
+          room.aiPlayerIds.includes(eliminated.id),
+          aliveAI.length
+        ),
+        kind: 'result',
+        emphasis: true,
+      })
+    }
 
     setTimeout(() => this.checkGameEnd(room), RESULT_DURATION * 1000)
   }
@@ -140,6 +179,11 @@ export class GameEngine {
         result: result.result,
         reason: result.reason,
         reveal: revealedPlayers,
+      })
+      this.io.to(room.code).emit(EVENTS.HOST_MESSAGE, {
+        text: HostMessages.gameOver(result.result, result.reason),
+        kind: 'game_over',
+        emphasis: true,
       })
     } else {
       room.round++

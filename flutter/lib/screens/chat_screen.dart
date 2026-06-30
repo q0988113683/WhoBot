@@ -6,6 +6,7 @@ import '../core/socket_service.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/player_avatar.dart';
 import '../widgets/countdown_timer.dart';
+import '../widgets/host_banner.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -77,10 +78,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               ),
             ),
+            HostBanner(message: state.hostMessage),
 
             // 頭像列
             SizedBox(
-              height: 56,
+              height: 72,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -89,13 +91,30 @@ class _ChatScreenState extends State<ChatScreen> {
                   final p = state.players[i];
                   final isMe = p.id == myId;
                   return Padding(
-                    padding: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.only(right: 10),
                     child: Opacity(
                       opacity: p.isEliminated ? 0.3 : 1,
-                      child: PlayerAvatar(
-                        avatarIndex: p.avatarIndex,
-                        label: avatarLabel(p.name, isMe),
-                        size: 40,
+                      child: Column(
+                        children: [
+                          PlayerAvatar(
+                            avatarIndex: p.avatarIndex,
+                            label: avatarLabel(p.name, isMe),
+                            size: 40,
+                          ),
+                          const SizedBox(height: 4),
+                          SizedBox(
+                            width: 56,
+                            child: Text(
+                              isMe ? '你' : p.name,
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   );
