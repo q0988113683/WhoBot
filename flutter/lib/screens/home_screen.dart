@@ -53,34 +53,26 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         // ── Hero logo block ──────────────────────────────
                         Container(
-                          width: 96,
-                          height: 96,
+                          width: 120,
+                          height: 120,
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                AppColors.primary.withAlpha(70),
-                                AppColors.surfaceLight,
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(26),
-                            border: Border.all(
-                              color: AppColors.primary.withAlpha(140),
-                              width: 1.5,
-                            ),
+                            borderRadius: BorderRadius.circular(28),
                             boxShadow: [
                               BoxShadow(
-                                color: AppColors.primary.withAlpha(60),
-                                blurRadius: 32,
+                                color: AppColors.primary.withAlpha(80),
+                                blurRadius: 40,
                                 spreadRadius: 2,
                               ),
                             ],
                           ),
-                          child: const Icon(
-                            Icons.smart_toy_outlined,
-                            color: AppColors.primaryLight,
-                            size: 48,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(28),
+                            child: Image.asset(
+                              'assets/logo.png',
+                              width: 120,
+                              height: 120,
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 24),
