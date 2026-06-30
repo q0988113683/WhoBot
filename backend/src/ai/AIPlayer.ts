@@ -44,12 +44,18 @@ export class AIPlayer {
     chatHistory: Message[],
     onSend: (content: string) => void
   ): void {
-    const count = 3 + Math.floor(Math.random() * 4)  // 3–6
+    // 找出人類模式：AI 要積極獵人，發更多、更密集
+    const findHuman = this.variant === 'find_human'
+    const count = findHuman
+      ? 6 + Math.floor(Math.random() * 4)   // 6–9
+      : 3 + Math.floor(Math.random() * 4)   // 3–6
     let sent = 0
 
     const sendNext = () => {
       if (sent >= count) return
-      const delay = (15 + Math.random() * 30) * 1000  // 15–45 秒
+      const delay = findHuman
+        ? (8 + Math.random() * 14) * 1000    // 8–22 秒
+        : (15 + Math.random() * 30) * 1000   // 15–45 秒
       this.chatSchedule = setTimeout(async () => {
         const content = await this.generateMessage(chatHistory)
         if (content) {
