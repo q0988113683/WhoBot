@@ -77,10 +77,21 @@ class _ChatScreenState extends State<ChatScreen> {
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: AppColors.border),
                     ),
-                    child: Text(
-                      '回合 ${state.round} / ${state.totalRounds}',
-                      style: const TextStyle(
-                          color: AppColors.textMuted, fontSize: 13),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.layers_outlined,
+                            color: AppColors.primaryLight, size: 15),
+                        const SizedBox(width: 6),
+                        Text(
+                          '回合 ${state.round} / ${state.totalRounds}',
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -116,9 +127,13 @@ class _ChatScreenState extends State<ChatScreen> {
                               isMe ? '你' : p.name,
                               textAlign: TextAlign.center,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: AppColors.textMuted,
+                              style: TextStyle(
+                                color: isMe
+                                    ? AppColors.primaryLight
+                                    : AppColors.textMuted,
                                 fontSize: 11,
+                                fontWeight:
+                                    isMe ? FontWeight.w700 : FontWeight.w400,
                               ),
                             ),
                           ),
@@ -187,12 +202,23 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Container(
                       width: 44,
                       height: 44,
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [AppColors.primaryLight, AppColors.primary],
+                        ),
                         shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withAlpha(102),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
-                      child: const Icon(Icons.arrow_upward,
-                          color: Colors.white, size: 20),
+                      child: const Icon(Icons.arrow_upward_rounded,
+                          color: Colors.white, size: 22),
                     ),
                   ),
                 ],

@@ -11,25 +11,50 @@ class CountdownTimer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isUrgent = secondsLeft < 20;
+    final isVote = phase == 'vote';
+    final accent = isUrgent
+        ? AppColors.danger
+        : (isVote ? AppColors.warning : AppColors.primaryLight);
     final mm = (secondsLeft ~/ 60).toString().padLeft(2, '0');
     final ss = (secondsLeft % 60).toString().padLeft(2, '0');
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: isUrgent ? AppColors.danger.withAlpha(((0.2)*255).round()) : AppColors.surfaceLight,
+        color: isUrgent
+            ? AppColors.danger.withAlpha(46)
+            : AppColors.surfaceLight,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isUrgent ? AppColors.danger : AppColors.border,
-        ),
+        border: Border.all(color: isUrgent ? AppColors.danger : AppColors.border),
+        boxShadow: isUrgent
+            ? [
+                BoxShadow(
+                  color: AppColors.danger.withAlpha(89),
+                  blurRadius: 12,
+                  spreadRadius: 1,
+                ),
+              ]
+            : null,
       ),
-      child: Text(
-        '$mm:$ss',
-        style: TextStyle(
-          color: isUrgent ? AppColors.danger : AppColors.textPrimary,
-          fontWeight: FontWeight.bold,
-          fontSize: 16,
-          fontFeatures: const [FontFeature.tabularFigures()],
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isVote ? Icons.how_to_vote_outlined : Icons.timer_outlined,
+            color: accent,
+            size: 16,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '$mm:$ss',
+            style: TextStyle(
+              color: isUrgent ? AppColors.danger : AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
       ),
     );
   }

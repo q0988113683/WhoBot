@@ -15,12 +15,28 @@ class PlayerAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final base = AppColors.avatarColor(avatarIndex);
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: AppColors.avatarColor(avatarIndex),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color.lerp(base, Colors.white, 0.18) ?? base,
+            base,
+          ],
+        ),
         shape: BoxShape.circle,
+        border: Border.all(color: Colors.white.withAlpha(38), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: base.withAlpha(89),
+            blurRadius: size * 0.22,
+            offset: Offset(0, size * 0.06),
+          ),
+        ],
       ),
       child: Center(
         child: Text(
@@ -29,6 +45,7 @@ class PlayerAvatar extends StatelessWidget {
             color: Colors.white,
             fontSize: size * 0.38,
             fontWeight: FontWeight.bold,
+            letterSpacing: 0.2,
           ),
         ),
       ),

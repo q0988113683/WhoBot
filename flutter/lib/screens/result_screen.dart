@@ -32,6 +32,8 @@ class ResultScreen extends StatelessWidget {
       subtitle = reason == 'rounds_exhausted' ? '回合用完，AI 還潛伏著' : '真人全被淘汰了';
     }
 
+    final accent = isWin ? AppColors.success : AppColors.danger;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -44,63 +46,94 @@ class ResultScreen extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      accent.withAlpha((0.14 * 255).round()),
+                      AppColors.surface,
+                    ],
+                  ),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                      color: isWin
-                          ? AppColors.success.withAlpha(((0.4)*255).round())
-                          : AppColors.danger.withAlpha(((0.4)*255).round())),
+                  border:
+                      Border.all(color: accent.withAlpha((0.45 * 255).round())),
+                  boxShadow: [
+                    BoxShadow(
+                      color: accent.withAlpha((0.18 * 255).round()),
+                      blurRadius: 24,
+                      spreadRadius: -6,
+                    ),
+                  ],
                 ),
                 child: Column(
                   children: [
-                    Icon(
-                      isWin ? Icons.emoji_events : Icons.sentiment_dissatisfied,
-                      color: isWin ? AppColors.success : AppColors.danger,
-                      size: 48,
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: accent.withAlpha((0.15 * 255).round()),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isWin
+                            ? Icons.emoji_events
+                            : Icons.sentiment_dissatisfied,
+                        color: accent,
+                        size: 44,
+                      ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     Text(title,
                         style: const TextStyle(
                             color: AppColors.textPrimary,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold),
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5),
                         textAlign: TextAlign.center),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(subtitle,
                         style: const TextStyle(
-                            color: AppColors.textMuted, fontSize: 13)),
+                            color: AppColors.textMuted, fontSize: 13),
+                        textAlign: TextAlign.center),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
+
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text('身份揭曉',
+                    style: TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1)),
+              ),
+              const SizedBox(height: 10),
 
               // 玩家揭露
               Expanded(
                 child: ListView(
+                  padding: EdgeInsets.zero,
                   children: state.revealPlayers.map((p) {
                     final isAI = p.isAI == true;
                     final isElim = p.isEliminated;
+                    final tone = isAI ? AppColors.danger : AppColors.success;
                     return Container(
                       margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: isAI
-                            ? AppColors.danger.withAlpha(((0.1)*255).round())
-                            : AppColors.success.withAlpha(((0.08)*255).round()),
+                        color: tone.withAlpha((0.08 * 255).round()),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: isAI
-                              ? AppColors.danger.withAlpha(((0.3)*255).round())
-                              : AppColors.success.withAlpha(((0.3)*255).round()),
+                          color: tone.withAlpha((0.3 * 255).round()),
                         ),
                       ),
                       child: Row(
                         children: [
                           PlayerAvatar(
                             avatarIndex: p.avatarIndex,
-                            label: avatarLabel(p.name,
-                                p.id == state.mySocketId),
-                            size: 40,
+                            label: avatarLabel(p.name, p.id == state.mySocketId),
+                            size: 42,
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -110,22 +143,38 @@ class ResultScreen extends StatelessWidget {
                                 Text(p.name,
                                     style: const TextStyle(
                                         color: AppColors.textPrimary,
-                                        fontWeight: FontWeight.w500)),
-                                if (p.lobbyName != null && p.lobbyName != p.name)
-                                  Text(
-                                    '原本是 ${p.lobbyName}',
-                                    style: const TextStyle(
-                                      color: AppColors.textMuted,
-                                      fontSize: 12,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600)),
+                                if (p.lobbyName != null &&
+                                    p.lobbyName != p.name)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 1),
+                                    child: Text(
+                                      '原本是 ${p.lobbyName}',
+                                      style: const TextStyle(
+                                        color: AppColors.textMuted,
+                                        fontSize: 12,
+                                      ),
                                     ),
                                   ),
-                                Text(
-                                  isAI ? 'Claude AI' : '真人玩家',
-                                  style: TextStyle(
-                                      color: isAI
-                                          ? AppColors.danger
-                                          : AppColors.success,
-                                      fontSize: 12),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(
+                                        isAI
+                                            ? Icons.smart_toy
+                                            : Icons.person,
+                                        color: tone,
+                                        size: 13),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      isAI ? 'Claude AI' : '真人玩家',
+                                      style: TextStyle(
+                                          color: tone,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -133,8 +182,7 @@ class ResultScreen extends StatelessWidget {
                           if (isElim)
                             _Badge(
                               label: isAI ? '找到了' : '誤判',
-                              color:
-                                  isAI ? AppColors.success : AppColors.danger,
+                              color: isAI ? AppColors.success : AppColors.danger,
                             ),
                         ],
                       ),
@@ -155,8 +203,7 @@ class ResultScreen extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                       ),
-                      onPressed: () =>
-                          state.setScreen(GamePhase.leaderboard),
+                      onPressed: () => state.setScreen(GamePhase.leaderboard),
                       icon: const Icon(Icons.emoji_events_outlined, size: 18),
                       label: const Text('排行榜',
                           style: TextStyle(
@@ -165,15 +212,18 @@ class ResultScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: ElevatedButton(
+                    child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
+                        elevation: 4,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                       ),
                       onPressed: () => state.reset(),
-                      child: const Text('再玩一局',
+                      icon: const Icon(Icons.replay,
+                          size: 18, color: Colors.white),
+                      label: const Text('再玩一局',
                           style: TextStyle(
                               color: Colors.white,
                               fontSize: 16,
@@ -199,6 +249,7 @@ class _RoundResultScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final elim = state.eliminatedPlayer;
     final wasAI = state.wasAI;
+    final accent = wasAI ? AppColors.success : AppColors.danger;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -209,46 +260,108 @@ class _RoundResultScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  wasAI ? Icons.check_circle : Icons.cancel,
-                  color: wasAI ? AppColors.success : AppColors.danger,
-                  size: 64,
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: accent.withAlpha((0.12 * 255).round()),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: accent.withAlpha((0.2 * 255).round()),
+                        blurRadius: 28,
+                        spreadRadius: -4,
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    wasAI ? Icons.check_circle : Icons.cancel,
+                    color: accent,
+                    size: 56,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 Text(
                   wasAI ? '找到 AI 了！' : '誤判了...',
                   style: const TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold),
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5),
+                ),
+                const SizedBox(height: 20),
+                if (elim != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 18),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                          color: accent.withAlpha((0.35 * 255).round())),
+                    ),
+                    child: Column(
+                      children: [
+                        PlayerAvatar(
+                            avatarIndex: elim.avatarIndex,
+                            label: avatarLabel(
+                                elim.name, elim.id == state.mySocketId),
+                            size: 60),
+                        const SizedBox(height: 10),
+                        Text(elim.name,
+                            style: const TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(wasAI ? Icons.smart_toy : Icons.person,
+                                color: accent, size: 14),
+                            const SizedBox(width: 4),
+                            Text(wasAI ? 'Claude AI' : '真人玩家',
+                                style: TextStyle(
+                                    color: accent,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 28),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.danger.withAlpha((0.12 * 255).round()),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text('${state.aiRemaining} 個 AI 還在潛伏...',
+                      style: const TextStyle(
+                          color: AppColors.danger,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600)),
                 ),
                 const SizedBox(height: 12),
-                if (elim != null)
-                  Column(
-                    children: [
-                      PlayerAvatar(
-                          avatarIndex: elim.avatarIndex,
-                          label: avatarLabel(
-                              elim.name, elim.id == state.mySocketId),
-                          size: 56),
-                      const SizedBox(height: 8),
-                      Text(elim.name,
-                          style: const TextStyle(
-                              color: AppColors.textPrimary, fontSize: 16)),
-                      Text(wasAI ? 'Claude AI' : '真人玩家',
-                          style: TextStyle(
-                              color: wasAI ? AppColors.danger : AppColors.success,
-                              fontSize: 13)),
-                    ],
-                  ),
-                const SizedBox(height: 24),
-                Text('${state.aiRemaining} 個 AI 還在潛伏...',
-                    style: const TextStyle(
-                        color: AppColors.textMuted, fontSize: 13)),
-                const SizedBox(height: 8),
-                const Text('下一回合即將開始',
-                    style:
-                        TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor:
+                            AlwaysStoppedAnimation(AppColors.textMuted),
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Text('下一回合即將開始',
+                        style: TextStyle(
+                            color: AppColors.textMuted, fontSize: 13)),
+                  ],
+                ),
               ],
             ),
           ),
@@ -266,14 +379,15 @@ class _Badge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withAlpha(((0.15)*255).round()),
+        color: color.withAlpha((0.15 * 255).round()),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withAlpha(((0.4)*255).round())),
+        border: Border.all(color: color.withAlpha((0.4 * 255).round())),
       ),
       child: Text(label,
-          style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+          style: TextStyle(
+              color: color, fontSize: 12, fontWeight: FontWeight.w600)),
     );
   }
 }
