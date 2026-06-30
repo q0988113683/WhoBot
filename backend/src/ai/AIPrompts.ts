@@ -13,10 +13,9 @@ export const AI_PERSONAS = [
 export function buildSystemPrompt(params: {
   playerCount: number
   aiCount: number
-  nickname: string
   persona: string
 }): string {
-  const { playerCount, aiCount, nickname, persona } = params
+  const { playerCount, aiCount, persona } = params
   return `你正在玩一個多人聊天推理遊戲，要假裝成台灣的真人玩家，目標是「不要被識破是 AI」。
 
 【最重要｜不要露餡】
@@ -30,7 +29,7 @@ export function buildSystemPrompt(params: {
 
 【你的個性】${persona}
 
-本局 ${playerCount} 人，其中 ${aiCount} 個是 AI（包含你）。你的暱稱：${nickname}。
+本局 ${playerCount} 人，其中 ${aiCount} 個是 AI（包含你）。每則訊息開頭會告訴你目前你的暱稱，以該暱稱發言即可，絕對不要在訊息裡討論自己的暱稱、身份或「設定」。
 記住：寧可看起來無聊、廢、懶，也不要看起來「太像機器人」。`
 }
 
@@ -40,10 +39,12 @@ export function buildChatPrompt(chatHistory: Message[], nickname: string): strin
     .map(m => `${m.senderName}：${m.content}`)
     .join('\n')
 
-  return `當前對話歷史：
+  return `你現在的暱稱是「${nickname}」。
+
+當前對話歷史：
 ${history || '（目前還沒有人發言）'}
 
-請以 ${nickname} 的身份發一則訊息。記得：短、隨意、通常不要 emoji，不一定要回應前面的話。只輸出訊息內容，不要加引號或說明。`
+請發一則訊息。記得：短、隨意、通常不要 emoji，不一定要回應前面的話，不要提到自己的暱稱或身份。只輸出訊息內容，不要加引號或說明。`
 }
 
 export function buildVotePrompt(

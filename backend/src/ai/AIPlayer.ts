@@ -24,7 +24,6 @@ export class AIPlayer {
     this.systemPrompt = buildSystemPrompt({
       playerCount: params.playerCount,
       aiCount: params.aiCount,
-      nickname: params.name,
       persona: AI_PERSONAS[Math.floor(Math.random() * AI_PERSONAS.length)],
     })
   }
