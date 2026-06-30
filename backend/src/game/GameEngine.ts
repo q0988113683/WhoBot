@@ -50,11 +50,16 @@ export class GameEngine {
       }
     }, 1000)
 
-    // 讓所有 AI 玩家開始排程發訊
+    // 讓「仍存活」的 AI 玩家開始排程發訊（被淘汰的 AI 不能再說話）
     for (const aiId of room.aiPlayerIds) {
+      const aiRecord = room.players.find(p => p.id === aiId)
+      if (aiRecord?.isEliminated) continue
       const ai = this.aiPlayers.get(aiId)
       if (!ai) continue
       ai.scheduleChatMessages(room.chatHistory, (content) => {
+        // 送出當下再次確認未被淘汰、且仍在聊天階段
+        const rec = room.players.find(p => p.id === ai.id)
+        if (rec?.isEliminated || room.phase !== 'chat') return
         const msg = {
           id: randomUUID(),
           senderId: ai.id,
@@ -95,8 +100,10 @@ export class GameEngine {
     // 找出人類模式：AI 不知道隊友，投票候選含所有人（傳空陣列）
     const teamIds = room.mode.variant === 'find_human' ? [] : room.aiPlayerIds
 
-    // AI 投票
+    // AI 投票（被淘汰的 AI 不投）
     for (const aiId of room.aiPlayerIds) {
+      const aiRecord = room.players.find(p => p.id === aiId)
+      if (aiRecord?.isEliminated) continue
       const ai = this.aiPlayers.get(aiId)
       if (!ai) continue
       const delay = Math.random() * 20000  // 0–20 秒內隨機投票
