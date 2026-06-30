@@ -14,6 +14,7 @@ export interface Player {
   isEliminated: boolean
   avatarIndex: number   // 進房順序決定，0–7
   isHost: boolean
+  userId?: string       // 排行榜用的持久使用者 id（真人才有；對應 device_id）
 }
 
 export interface Message {

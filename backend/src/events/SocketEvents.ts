@@ -1,6 +1,7 @@
 // 所有 Socket.io event 名稱常數，前後端共用格式
 export const EVENTS = {
   // Client → Server
+  IDENTIFY: 'identify',
   CREATE_ROOM: 'create_room',
   JOIN_ROOM: 'join_room',
   QUICK_MATCH: 'quick_match',
@@ -8,8 +9,10 @@ export const EVENTS = {
   SEND_MESSAGE: 'send_message',
   CAST_VOTE: 'cast_vote',
   READY_NEXT_ROUND: 'ready_next_round',
+  GET_LEADERBOARD: 'get_leaderboard',
 
   // Server → Client
+  LEADERBOARD_DATA: 'leaderboard_data',
   ROOM_CREATED: 'room_created',
   LOBBY_UPDATE: 'lobby_update',
   LOBBY_READY: 'lobby_ready',

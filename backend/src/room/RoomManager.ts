@@ -21,7 +21,7 @@ export class RoomManager {
     return this.engine
   }
 
-  createRoom(socketId: string, nickname: string, mode: 4 | 6 | 8): Room {
+  createRoom(socketId: string, nickname: string, mode: 4 | 6 | 8, userId?: string): Room {
     const code = this.generateCode()
     const player: Player = {
       id: socketId,
@@ -30,6 +30,7 @@ export class RoomManager {
       isEliminated: false,
       avatarIndex: 0,
       isHost: true,
+      userId,
     }
     const room: Room = {
       code,
@@ -46,7 +47,7 @@ export class RoomManager {
     return room
   }
 
-  joinRoom(socketId: string, nickname: string, code: string): Room | null {
+  joinRoom(socketId: string, nickname: string, code: string, userId?: string): Room | null {
     const room = this.rooms.get(code.toUpperCase())
     if (!room || room.phase !== 'waiting') return null
     if (room.players.find(p => p.id === socketId)) return room
@@ -59,13 +60,14 @@ export class RoomManager {
       isEliminated: false,
       avatarIndex: 0,
       isHost: false,
+      userId,
     }
     room.players.push(player)
     this.socketToRoom.set(socketId, code.toUpperCase())
     return room
   }
 
-  quickMatch(socketId: string, nickname: string, mode: 4 | 6 | 8): Room {
+  quickMatch(socketId: string, nickname: string, mode: 4 | 6 | 8, userId?: string): Room {
     // 找同模式、等待中且未滿的房間
     for (const room of this.rooms.values()) {
       if (
@@ -73,12 +75,12 @@ export class RoomManager {
         room.mode.playerCount === mode &&
         room.players.length < room.mode.humanCount
       ) {
-        this.joinRoom(socketId, nickname, room.code)
+        this.joinRoom(socketId, nickname, room.code, userId)
         return room
       }
     }
     // 沒有合適房間，建立新的
-    return this.createRoom(socketId, nickname, mode)
+    return this.createRoom(socketId, nickname, mode, userId)
   }
 
   isReady(room: Room): boolean {

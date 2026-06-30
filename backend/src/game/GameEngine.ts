@@ -7,6 +7,7 @@ import { VoteManager } from './VoteManager'
 import { EVENTS } from '../events/SocketEvents'
 import { AIPlayer } from '../ai/AIPlayer'
 import { HostMessages } from './HostMessages'
+import { recordVotes, incrementGamesPlayed, saveGameSession } from '../db/queries'
 
 export class GameEngine {
   private io: Server
@@ -137,6 +138,20 @@ export class GameEngine {
     clearInterval(room.timerInterval)
     room.phase = 'result'
 
+    // 記錄真人這回合的投票到排行榜（best-effort，不阻塞遊戲）
+    const voteEntries = [...room.votes.entries()]
+      .map(([voterId, targetId]) => {
+        const voter = room.players.find(p => p.id === voterId)
+        if (!voter?.userId) return null
+        return {
+          userId: voter.userId,
+          targetIsAi: room.aiPlayerIds.includes(targetId),
+          round: room.round,
+        }
+      })
+      .filter((e): e is { userId: string; targetIsAi: boolean; round: number } => e !== null)
+    void recordVotes(voteEntries)
+
     const eliminated = this.voteManager.tally(room)
     if (eliminated) {
       eliminated.isEliminated = true
@@ -185,6 +200,20 @@ export class GameEngine {
         text: HostMessages.gameOver(result.result, result.reason),
         kind: 'game_over',
         emphasis: true,
+      })
+
+      // 排行榜 / 對局統計（best-effort）
+      const humanUserIds = room.players
+        .filter(p => !room.aiPlayerIds.includes(p.id) && p.userId)
+        .map(p => p.userId as string)
+      void incrementGamesPlayed(humanUserIds)
+      void saveGameSession({
+        roomCode: room.code,
+        mode: room.mode.playerCount,
+        result: result.result,
+        endReason: result.reason,
+        roundsPlayed: room.round,
+        playerCount: room.mode.playerCount,
       })
     } else {
       room.round++

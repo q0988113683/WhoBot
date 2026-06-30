@@ -6,6 +6,8 @@ import cors from 'cors'
 import { RoomManager } from './room/RoomManager'
 import { EVENTS } from './events/SocketEvents'
 import { Room } from './room/RoomTypes'
+import { initDb } from './db/init'
+import { upsertUser, getLeaderboard, getUserRank } from './db/queries'
 
 const app = express()
 app.use(cors({ origin: process.env.CORS_ORIGIN ?? '*' }))
@@ -17,6 +19,9 @@ const io = new Server(httpServer, {
 })
 
 const roomManager = new RoomManager(io)
+
+// socketId → 持久 userId（排行榜身份，來自 client 的 device_id）
+const socketToUser = new Map<string, string>()
 
 function emitLobbyUpdate(room: Room): void {
   const payload = {
@@ -46,9 +51,16 @@ app.get('/health', (_req, res) => {
 io.on('connection', (socket) => {
   console.log(`[Socket] 連線：${socket.id}`)
 
+  // 身份識別：client 連線後送 device_id + 暱稱，用於排行榜統計
+  socket.on(EVENTS.IDENTIFY, async ({ deviceId, nickname }: { deviceId?: string; nickname?: string }) => {
+    if (!deviceId) return
+    const userId = await upsertUser(deviceId, nickname ?? '玩家')
+    if (userId) socketToUser.set(socket.id, userId)
+  })
+
   // 建立房間
   socket.on(EVENTS.CREATE_ROOM, ({ name, nickname, mode }: { name?: string; nickname?: string; mode: 4 | 6 | 8 }) => {
-    const room = roomManager.createRoom(socket.id, name ?? nickname ?? '玩家', mode)
+    const room = roomManager.createRoom(socket.id, name ?? nickname ?? '玩家', mode, socketToUser.get(socket.id))
     socket.join(room.code)
     socket.emit(EVENTS.ROOM_CREATED, { roomCode: room.code, mode: room.mode })
     emitLobbyUpdate(room)
@@ -56,7 +68,7 @@ io.on('connection', (socket) => {
 
   // 用代碼加入房間
   socket.on(EVENTS.JOIN_ROOM, ({ name, nickname, roomCode }: { name?: string; nickname?: string; roomCode: string }) => {
-    const room = roomManager.joinRoom(socket.id, name ?? nickname ?? '玩家', roomCode)
+    const room = roomManager.joinRoom(socket.id, name ?? nickname ?? '玩家', roomCode, socketToUser.get(socket.id))
     if (!room) {
       socket.emit(EVENTS.ERROR, { message: '房間不存在或已開始' })
       return
@@ -67,9 +79,18 @@ io.on('connection', (socket) => {
 
   // 快速配對
   socket.on(EVENTS.QUICK_MATCH, ({ name, nickname, mode }: { name?: string; nickname?: string; mode: 4 | 6 | 8 }) => {
-    const room = roomManager.quickMatch(socket.id, name ?? nickname ?? '玩家', mode)
+    const room = roomManager.quickMatch(socket.id, name ?? nickname ?? '玩家', mode, socketToUser.get(socket.id))
     socket.join(room.code)
+    socket.emit(EVENTS.ROOM_CREATED, { roomCode: room.code, mode: room.mode })
     emitLobbyUpdate(room)
+  })
+
+  // 排行榜
+  socket.on(EVENTS.GET_LEADERBOARD, async ({ limit }: { limit?: number } = {}) => {
+    const entries = await getLeaderboard(limit ?? 50)
+    const userId = socketToUser.get(socket.id)
+    const myRank = userId ? await getUserRank(userId) : null
+    socket.emit(EVENTS.LEADERBOARD_DATA, { entries, myRank })
   })
 
   socket.on(EVENTS.START_GAME, () => {
@@ -113,11 +134,13 @@ io.on('connection', (socket) => {
   // 斷線處理
   socket.on('disconnect', () => {
     console.log(`[Socket] 斷線：${socket.id}`)
+    socketToUser.delete(socket.id)
     roomManager.removePlayer(socket.id)
   })
 })
 
 const PORT = process.env.PORT ?? 3000
+void initDb()
 httpServer.listen(PORT, () => {
   console.log(`[Server] WhoBot 後端啟動 port ${PORT}`)
 })
