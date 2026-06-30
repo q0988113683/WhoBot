@@ -31,14 +31,14 @@ class _JoinRoomSheetState extends State<JoinRoomSheet> {
           TextField(
             controller: _ctrl,
             autofocus: true,
-            textCapitalization: TextCapitalization.characters,
+            keyboardType: TextInputType.number,
             style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 24,
                 letterSpacing: 4,
                 fontWeight: FontWeight.bold),
             decoration: InputDecoration(
-              hintText: 'XXXXXX',
+              hintText: '0000',
               hintStyle: const TextStyle(color: AppColors.textMuted),
               filled: true,
               fillColor: AppColors.surfaceLight,
@@ -51,7 +51,7 @@ class _JoinRoomSheetState extends State<JoinRoomSheet> {
                 borderSide: const BorderSide(color: AppColors.border),
               ),
             ),
-            maxLength: 6,
+            maxLength: 4,
             onSubmitted: (v) => _submit(),
           ),
           const SizedBox(height: 12),
@@ -79,8 +79,8 @@ class _JoinRoomSheetState extends State<JoinRoomSheet> {
   }
 
   void _submit() {
-    final code = _ctrl.text.trim().toUpperCase();
-    if (code.length == 6) {
+    final code = _ctrl.text.trim();
+    if (code.length == 4) {
       Navigator.pop(context);
       widget.onJoin(code);
     }
