@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto'
 import { Server } from 'socket.io'
 import { Room } from '../room/RoomTypes'
 import { GameEndResult, Player } from './GameTypes'
@@ -53,7 +54,7 @@ export class GameEngine {
       if (!ai) continue
       ai.scheduleChatMessages(room.chatHistory, (content) => {
         const msg = {
-          id: crypto.randomUUID(),
+          id: randomUUID(),
           senderId: ai.id,
           senderName: ai.name,
           senderGameName: ai.name,

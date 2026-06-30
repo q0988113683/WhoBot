@@ -1,4 +1,5 @@
 import express from 'express'
+import { randomUUID } from 'crypto'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import cors from 'cors'
@@ -89,7 +90,7 @@ io.on('connection', (socket) => {
 
     const safe = content.slice(0, 200)
     const msg = {
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       senderId: socket.id,
       senderName: player.name,
       senderGameName: player.gameName ?? player.name,
