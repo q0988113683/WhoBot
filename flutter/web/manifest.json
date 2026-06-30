@@ -1,11 +1,11 @@
 {
-    "name": "whobot_app",
-    "short_name": "whobot_app",
+    "name": "WhosBot",
+    "short_name": "WhosBot",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0F0F14",
+    "theme_color": "#7C3AED",
+    "description": "找出聊天室裡的 AI — 多人即時推理遊戲",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
