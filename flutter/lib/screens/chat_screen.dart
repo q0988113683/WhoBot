@@ -18,6 +18,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final _ctrl = TextEditingController();
   final _scroll = ScrollController();
+  int _lastCount = 0;
 
   @override
   void dispose() {
@@ -26,26 +27,33 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
+  void _scrollToBottom() {
+    if (!_scroll.hasClients) return;
+    _scroll.animateTo(
+      _scroll.position.maxScrollExtent,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+    );
+  }
+
   void _send(GameState state) {
     final text = _ctrl.text.trim();
     if (text.isEmpty) return;
     context.read<SocketService>().sendMessage(text);
     _ctrl.clear();
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (_scroll.hasClients) {
-        _scroll.animateTo(
-          _scroll.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+    // 實際滾動由 build 偵測訊息數變化時觸發（訊息經 server 繞回才會出現）
   }
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<GameState>();
     final myId = state.mySocketId;
+
+    // 收到新訊息（自己送的或別人/AI 的）就自動捲到底
+    if (state.messages.length != _lastCount) {
+      _lastCount = state.messages.length;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,

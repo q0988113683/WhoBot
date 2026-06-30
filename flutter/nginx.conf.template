@@ -7,11 +7,8 @@ server {
     # SPA fallback：所有路由都回 index.html，交給 Flutter router 處理
     location / {
         try_files $uri $uri/ /index.html;
-    }
-
-    # 靜態資源快取
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?|wasm)$ {
-        expires 7d;
-        add_header Cache-Control "public";
+        # 不長期快取：Flutter web 的 main.dart.js 等檔名不含 hash，
+        # 長快取會讓使用者部署後仍載到舊版。改用 ETag 重新驗證（命中回 304）。
+        add_header Cache-Control "no-cache";
     }
 }
