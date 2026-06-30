@@ -23,7 +23,7 @@ export class GameEngine {
     room.votes = new Map()
     let secondsLeft = CHAT_DURATION
 
-    this.io.to(room.code).emit(EVENTS.TIMER_UPDATE, { phase: 'chat', secondsLeft })
+    this.io.to(room.code).emit(EVENTS.TIMER_UPDATE, { phase: 'chat', secondsLeft, round: room.round })
     this.io.to(room.code).emit(EVENTS.HOST_MESSAGE, {
       text: room.round === 1
         ? HostMessages.gameStart(room.mode)

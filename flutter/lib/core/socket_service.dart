@@ -76,7 +76,16 @@ class SocketService {
 
     _socket.on('timer_update', (data) {
       final d = Map<String, dynamic>.from(data as Map);
-      state.phase = d['phase'] as String;
+      final newPhase = d['phase'] as String;
+      // 新一回合的聊天開始：後端只發 timer_update / host_message，
+      // 因此在這裡負責把畫面從上一回合的結算切回聊天。
+      if (newPhase == 'chat' && state.screen != GamePhase.chat) {
+        state.messages = [];
+        state.eliminatedPlayer = null;
+        if (d['round'] != null) state.round = d['round'] as int;
+        state.setScreen(GamePhase.chat);
+      }
+      state.phase = newPhase;
       state.secondsLeft = d['secondsLeft'] as int;
       state.notify();
     });
