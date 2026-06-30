@@ -90,17 +90,27 @@ class HostMessageModel {
       );
 }
 
+enum GameVariant { findAi, findHuman }
+
+GameVariant variantFromString(String? s) =>
+    s == 'find_human' ? GameVariant.findHuman : GameVariant.findAi;
+
+String variantToString(GameVariant v) =>
+    v == GameVariant.findHuman ? 'find_human' : 'find_ai';
+
 class ModeConfig {
   final int playerCount;
   final int humanCount;
   final int aiCount;
   final int totalRounds;
+  final GameVariant variant;
 
   const ModeConfig({
     required this.playerCount,
     required this.humanCount,
     required this.aiCount,
     required this.totalRounds,
+    this.variant = GameVariant.findAi,
   });
 
   factory ModeConfig.fromJson(Map<String, dynamic> j) => ModeConfig(
@@ -108,6 +118,7 @@ class ModeConfig {
         humanCount: j['humanCount'] as int,
         aiCount: j['aiCount'] as int,
         totalRounds: j['totalRounds'] as int,
+        variant: variantFromString(j['variant'] as String?),
       );
 }
 
@@ -156,6 +167,11 @@ class GameState extends ChangeNotifier {
   bool lobbyIsFull = false;
   bool canStartGame = false;
 
+  // 玩法（首頁選擇 + game_start 以伺服器為準覆寫）
+  GameVariant variant = GameVariant.findAi;
+  bool youAreHuman = false;        // 找出人類：自己是否為真人
+  List<String> humanAllies = [];   // 找出人類：其他真人隊友的 gameName
+
   // 遊戲中
   List<PlayerModel> players = [];
   List<MessageModel> messages = [];
@@ -164,6 +180,10 @@ class GameState extends ChangeNotifier {
   int totalRounds = 1;
   int aiTotal = 1;
   int aiRemaining = 1;
+  int huntedRemaining = 1;   // 被獵殺隊伍剩餘（找出AI→剩餘AI；找出人類→剩餘人類）
+
+  // 被獵殺隊伍名稱（找出AI→AI；找出人類→人類）
+  String get huntedLabel => variant == GameVariant.findHuman ? '人類' : 'AI';
 
   // 計時器
   String phase = 'chat'; // chat | vote
@@ -221,6 +241,11 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setVariant(GameVariant v) {
+    variant = v;
+    notifyListeners();
+  }
+
   // 排行榜看完返回原畫面（首頁或結算）
   void closeLeaderboard() {
     screen = _prevScreen == GamePhase.leaderboard ? GamePhase.home : _prevScreen;
@@ -260,6 +285,8 @@ class GameState extends ChangeNotifier {
     gameResult = null;
     endReason = null;
     revealPlayers = [];
+    youAreHuman = false;
+    humanAllies = [];
     screen = GamePhase.home;
     notifyListeners();
   }

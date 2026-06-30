@@ -38,8 +38,8 @@ class VoteScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('誰是 AI？',
-                            style: TextStyle(
+                        Text('誰是${state.huntedLabel}？',
+                            style: const TextStyle(
                                 color: AppColors.textPrimary,
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -55,7 +55,8 @@ class VoteScreen extends StatelessWidget {
                                     .withAlpha((0.15 * 255).round()),
                                 borderRadius: BorderRadius.circular(6),
                               ),
-                              child: Text('還有 ${state.aiRemaining} 個 AI 未找出',
+                              child: Text(
+                                  '還有 ${state.huntedRemaining} 個${state.huntedLabel}未找出',
                                   style: const TextStyle(
                                       color: AppColors.danger,
                                       fontSize: 12,

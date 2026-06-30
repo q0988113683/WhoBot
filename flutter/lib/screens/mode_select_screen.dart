@@ -12,25 +12,45 @@ class ModeSelectScreen extends StatefulWidget {
 }
 
 class _ModeSelectScreenState extends State<ModeSelectScreen> {
-  int _selected = 6; // 預設推薦 6 人
+  late int _selected;
 
-  static const _modes = [
-    {'count': 4, 'human': 3, 'ai': 1, 'rounds': 2, 'mins': '~6 分'},
-    {'count': 6, 'human': 4, 'ai': 2, 'rounds': 4, 'mins': '~12 分'},
-    {'count': 8, 'human': 6, 'ai': 2, 'rounds': 6, 'mins': '~18 分'},
+  // 找出 AI（真人多數）
+  static const _modesFindAi = [
+    {'count': 4, 'human': 3, 'ai': 1, 'rounds': 2, 'mins': '~6 分', 'recommended': false},
+    {'count': 6, 'human': 4, 'ai': 2, 'rounds': 4, 'mins': '~12 分', 'recommended': true},
+    {'count': 8, 'human': 6, 'ai': 2, 'rounds': 6, 'mins': '~18 分', 'recommended': false},
   ];
+  // 找出人類（AI 多數）
+  static const _modesFindHuman = [
+    {'count': 3, 'human': 1, 'ai': 2, 'rounds': 2, 'mins': '~5 分', 'recommended': false},
+    {'count': 5, 'human': 2, 'ai': 3, 'rounds': 3, 'mins': '~9 分', 'recommended': true},
+  ];
+
+  List<Map<String, Object>> get _modes =>
+      context.read<GameState>().variant == GameVariant.findHuman
+          ? _modesFindHuman
+          : _modesFindAi;
+
+  @override
+  void initState() {
+    super.initState();
+    final v = context.read<GameState>().variant;
+    _selected = v == GameVariant.findHuman ? 5 : 6;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final variant = context.watch<GameState>().variant;
+    final isFindHuman = variant == GameVariant.findHuman;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.background,
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
-        title: const Text(
-          '選擇人數',
-          style: TextStyle(fontWeight: FontWeight.w700),
+        title: Text(
+          isFindHuman ? '找出人類・選擇人數' : '找出 AI・選擇人數',
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
         centerTitle: false,
       ),
@@ -41,9 +61,11 @@ class _ModeSelectScreenState extends State<ModeSelectScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '人越多，遊戲越久越刺激',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+              Text(
+                isFindHuman
+                    ? '你是少數真人，假裝成 AI 活到最後'
+                    : '人越多，遊戲越久越刺激',
+                style: const TextStyle(color: AppColors.textMuted, fontSize: 14),
               ),
               const SizedBox(height: 24),
               ..._modes.map((m) => _ModeCard(
@@ -68,6 +90,7 @@ class _ModeSelectScreenState extends State<ModeSelectScreen> {
                     context.read<SocketService>().quickMatch(
                           state.nickname,
                           _selected,
+                          variant: state.variant,
                         );
                     Navigator.pop(context);
                   },
@@ -96,6 +119,7 @@ class _ModeSelectScreenState extends State<ModeSelectScreen> {
                     context.read<SocketService>().createRoom(
                           state.nickname,
                           _selected,
+                          variant: state.variant,
                         );
                     Navigator.pop(context);
                   },
@@ -128,7 +152,7 @@ class _ModeCard extends StatelessWidget {
     final ai = mode['ai'] as int;
     final rounds = mode['rounds'] as int;
     final mins = mode['mins'] as String;
-    final isRecommended = count == 6;
+    final isRecommended = mode['recommended'] as bool? ?? false;
 
     return GestureDetector(
       onTap: onTap,

@@ -16,20 +16,33 @@ class ResultScreen extends StatelessWidget {
       return _RoundResultScreen(state: state);
     }
 
-    final isWin = state.gameResult == 'humans_win';
+    final isFindHuman = state.variant == GameVariant.findHuman;
+    final isWin = state.gameResult == 'humans_win'; // 玩家恆為真人陣營
     final reason = state.endReason ?? '';
 
     String title;
     String subtitle;
-    if (isWin) {
-      final aiCount = state.revealPlayers.where((p) => p.isAI == true).length;
-      title = '勝利！${aiCount > 1 ? '兩隻' : ''}AI 都找到了';
-      subtitle = reason == 'all_ai_found'
-          ? '提早找出全部 AI・${state.round} 回合'
-          : '找出全部 AI';
+    if (isFindHuman) {
+      if (isWin) {
+        title = '人類獲勝！';
+        subtitle = reason == 'all_ai_eliminated'
+            ? '把 AI 全投出去了'
+            : '成功偽裝成 AI，撐到了最後';
+      } else {
+        title = '被識破了...';
+        subtitle = '偽裝的人類全被 AI 揪出來了';
+      }
     } else {
-      title = '失敗...';
-      subtitle = reason == 'rounds_exhausted' ? '回合用完，AI 還潛伏著' : '真人全被淘汰了';
+      if (isWin) {
+        final aiCount = state.revealPlayers.where((p) => p.isAI == true).length;
+        title = '勝利！${aiCount > 1 ? '兩隻' : ''}AI 都找到了';
+        subtitle = reason == 'all_ai_found'
+            ? '提早找出全部 AI・${state.round} 回合'
+            : '找出全部 AI';
+      } else {
+        title = '失敗...';
+        subtitle = reason == 'rounds_exhausted' ? '回合用完，AI 還潛伏著' : '真人全被淘汰了';
+      }
     }
 
     final accent = isWin ? AppColors.success : AppColors.danger;
@@ -180,10 +193,16 @@ class ResultScreen extends StatelessWidget {
                             ),
                           ),
                           if (isElim)
-                            _Badge(
-                              label: isAI ? '找到了' : '誤判',
-                              color: isAI ? AppColors.success : AppColors.danger,
-                            ),
+                            () {
+                              // 被淘汰者是否屬於「被獵殺隊伍」（找出AI→AI；找出人類→人類）
+                              final wasHunted = isFindHuman ? !isAI : isAI;
+                              return _Badge(
+                                label: wasHunted ? '找到了' : '誤判',
+                                color: wasHunted
+                                    ? AppColors.success
+                                    : AppColors.danger,
+                              );
+                            }(),
                         ],
                       ),
                     );
@@ -249,7 +268,11 @@ class _RoundResultScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final elim = state.eliminatedPlayer;
     final wasAI = state.wasAI;
-    final accent = wasAI ? AppColors.success : AppColors.danger;
+    final isFindHuman = state.variant == GameVariant.findHuman;
+    // 是否投中「被獵殺隊伍」（找出AI→AI；找出人類→人類）
+    final foundHunted = isFindHuman ? !wasAI : wasAI;
+    final accent = foundHunted ? AppColors.success : AppColors.danger;
+    final identityTone = wasAI ? AppColors.danger : AppColors.success;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -274,14 +297,14 @@ class _RoundResultScreen extends StatelessWidget {
                     ],
                   ),
                   child: Icon(
-                    wasAI ? Icons.check_circle : Icons.cancel,
+                    foundHunted ? Icons.check_circle : Icons.cancel,
                     color: accent,
                     size: 56,
                   ),
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  wasAI ? '找到 AI 了！' : '誤判了...',
+                  foundHunted ? '找到${state.huntedLabel}了！' : '誤判了...',
                   style: const TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 26,
@@ -317,11 +340,11 @@ class _RoundResultScreen extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(wasAI ? Icons.smart_toy : Icons.person,
-                                color: accent, size: 14),
+                                color: identityTone, size: 14),
                             const SizedBox(width: 4),
                             Text(wasAI ? 'Claude AI' : '真人玩家',
                                 style: TextStyle(
-                                    color: accent,
+                                    color: identityTone,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600)),
                           ],
@@ -337,7 +360,7 @@ class _RoundResultScreen extends StatelessWidget {
                     color: AppColors.danger.withAlpha((0.12 * 255).round()),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text('${state.aiRemaining} 個 AI 還在潛伏...',
+                  child: Text('${state.huntedRemaining} 個${state.huntedLabel}還在潛伏...',
                       style: const TextStyle(
                           color: AppColors.danger,
                           fontSize: 13,

@@ -99,6 +99,37 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             HostBanner(message: state.hostMessage),
 
+            // 找出人類模式：提醒真人玩家自己的身份與隊友
+            if (state.variant == GameVariant.findHuman && state.youAreHuman)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withAlpha(28),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.success.withAlpha(120)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.shield_outlined,
+                        color: AppColors.success, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        state.humanAllies.isEmpty
+                            ? '你是人類，假裝成 AI 活下去！'
+                            : '你是人類，隊友：${state.humanAllies.join('、')}。一起假裝成 AI！',
+                        style: const TextStyle(
+                            color: AppColors.success,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             // 頭像列
             SizedBox(
               height: 72,

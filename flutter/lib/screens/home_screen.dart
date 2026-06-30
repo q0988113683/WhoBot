@@ -196,7 +196,36 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 18),
+                        // ── 玩法選擇 ──────────────────────────────────────
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _VariantCard(
+                                title: '找出 AI',
+                                subtitle: '真人多數，揪出 AI',
+                                icon: Icons.smart_toy_outlined,
+                                selected: state.variant == GameVariant.findAi,
+                                onTap: () => context
+                                    .read<GameState>()
+                                    .setVariant(GameVariant.findAi),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _VariantCard(
+                                title: '找出人類',
+                                subtitle: 'AI 多數，揪出真人',
+                                icon: Icons.person_search_outlined,
+                                selected: state.variant == GameVariant.findHuman,
+                                onTap: () => context
+                                    .read<GameState>()
+                                    .setVariant(GameVariant.findHuman),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
                         // ── Primary action: 建立房間 ──────────────────────
                         SizedBox(
                           width: double.infinity,
@@ -307,6 +336,62 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _VariantCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _VariantCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.primary.withAlpha(38)
+              : AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? AppColors.primary : AppColors.border,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(icon,
+                size: 24,
+                color: selected ? AppColors.primaryLight : AppColors.textMuted),
+            const SizedBox(height: 8),
+            Text(title,
+                style: TextStyle(
+                  color: selected ? AppColors.textPrimary : AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                )),
+            const SizedBox(height: 2),
+            Text(subtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    color: AppColors.textMuted, fontSize: 11)),
+          ],
         ),
       ),
     );

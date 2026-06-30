@@ -58,6 +58,7 @@ class SocketService {
       final d = Map<String, dynamic>.from(data as Map);
       state.roomCode = d['roomCode'] as String;
       state.mode = ModeConfig.fromJson(Map<String, dynamic>.from(d['mode'] as Map));
+      state.variant = state.mode!.variant;
       state.setScreen(GamePhase.lobby);
     });
 
@@ -68,10 +69,15 @@ class SocketService {
           .toList();
       state.mySocketId = d['yourId'] as String? ?? state.mySocketId;
       state.mode = ModeConfig.fromJson(Map<String, dynamic>.from(d['mode'] as Map));
+      state.variant = state.mode!.variant;
+      state.youAreHuman = d['youAreHuman'] as bool? ?? false;
+      state.humanAllies =
+          (d['humanAllies'] as List?)?.map((e) => e as String).toList() ?? [];
       state.round = d['round'] as int;
       state.totalRounds = state.mode!.totalRounds;
       state.aiTotal = state.mode!.aiCount;
       state.aiRemaining = state.mode!.aiCount;
+      state.huntedRemaining = state.mode!.humanCount;
       state.messages = [];
       state.hostMessage = null;
       state.setScreen(GamePhase.chat);
@@ -135,6 +141,7 @@ class SocketService {
       }
       state.wasAI = d['wasAI'] as bool;
       state.aiRemaining = d['aiRemaining'] as int;
+      state.huntedRemaining = d['huntedRemaining'] as int? ?? d['aiRemaining'] as int;
       state.setScreen(GamePhase.result);
     });
 
@@ -158,16 +165,26 @@ class SocketService {
     });
   }
 
-  void createRoom(String nickname, int mode) {
-    _socket.emit('create_room', {'name': nickname, 'nickname': nickname, 'mode': mode});
+  void createRoom(String nickname, int mode, {GameVariant variant = GameVariant.findAi}) {
+    _socket.emit('create_room', {
+      'name': nickname,
+      'nickname': nickname,
+      'mode': mode,
+      'variant': variantToString(variant),
+    });
   }
 
   void joinRoom(String nickname, String roomCode) {
     _socket.emit('join_room', {'name': nickname, 'nickname': nickname, 'roomCode': roomCode});
   }
 
-  void quickMatch(String nickname, int mode) {
-    _socket.emit('quick_match', {'name': nickname, 'nickname': nickname, 'mode': mode});
+  void quickMatch(String nickname, int mode, {GameVariant variant = GameVariant.findAi}) {
+    _socket.emit('quick_match', {
+      'name': nickname,
+      'nickname': nickname,
+      'mode': mode,
+      'variant': variantToString(variant),
+    });
   }
 
   void startGame() {
