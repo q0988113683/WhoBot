@@ -749,7 +749,7 @@ CORS_ORIGIN=*
 ```dart
 const String kServerUrl = String.fromEnvironment(
   'SERVER_URL',
-  defaultValue: 'wss://whosbot.railway.app',
+  defaultValue: 'https://whobot-production.up.railway.app',
 );
 ```
 

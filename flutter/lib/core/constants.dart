@@ -28,8 +28,9 @@ class AppColors {
       avatarPalette[index % avatarPalette.length];
 }
 
-// 預設使用 localhost，部署時用 --dart-define=SERVER_URL=wss://...
+// 預設連線到 Railway 正式環境（socket.io 會自動升級為 WebSocket）。
+// 本機開發時覆寫：flutter run --dart-define=SERVER_URL=http://localhost:3000
 const String kServerUrl = String.fromEnvironment(
   'SERVER_URL',
-  defaultValue: 'http://localhost:3000',
+  defaultValue: 'https://whobot-production.up.railway.app',
 );
