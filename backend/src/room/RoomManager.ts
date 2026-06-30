@@ -1,8 +1,8 @@
 import { Server } from 'socket.io'
 import { v4 as uuidv4 } from 'uuid'
 import { Room } from './RoomTypes'
-import { Player } from '../game/GameTypes'
-import { GAME_MODES } from '../game/GameConfig'
+import { Player, GameVariant } from '../game/GameTypes'
+import { getMode } from '../game/GameConfig'
 import { GameEngine } from '../game/GameEngine'
 import { AIPlayer } from '../ai/AIPlayer'
 import { EVENTS } from '../events/SocketEvents'
@@ -21,7 +21,15 @@ export class RoomManager {
     return this.engine
   }
 
-  createRoom(socketId: string, nickname: string, mode: 4 | 6 | 8, userId?: string): Room {
+  createRoom(
+    socketId: string,
+    nickname: string,
+    count: number,
+    variant: GameVariant = 'find_ai',
+    userId?: string
+  ): Room | null {
+    const mode = getMode(variant, count)
+    if (!mode) return null
     const code = this.generateCode()
     const player: Player = {
       id: socketId,
@@ -34,7 +42,7 @@ export class RoomManager {
     }
     const room: Room = {
       code,
-      mode: GAME_MODES[mode],
+      mode,
       players: [player],
       round: 1,
       phase: 'waiting',
@@ -67,12 +75,19 @@ export class RoomManager {
     return room
   }
 
-  quickMatch(socketId: string, nickname: string, mode: 4 | 6 | 8, userId?: string): Room {
-    // 找同模式、等待中且未滿的房間
+  quickMatch(
+    socketId: string,
+    nickname: string,
+    count: number,
+    variant: GameVariant = 'find_ai',
+    userId?: string
+  ): Room | null {
+    // 找同玩法、同人數、等待中且未滿的房間
     for (const room of this.rooms.values()) {
       if (
         room.phase === 'waiting' &&
-        room.mode.playerCount === mode &&
+        room.mode.variant === variant &&
+        room.mode.playerCount === count &&
         room.players.length < room.mode.humanCount
       ) {
         this.joinRoom(socketId, nickname, room.code, userId)
@@ -80,7 +95,7 @@ export class RoomManager {
       }
     }
     // 沒有合適房間，建立新的
-    return this.createRoom(socketId, nickname, mode, userId)
+    return this.createRoom(socketId, nickname, count, variant, userId)
   }
 
   isReady(room: Room): boolean {
@@ -103,6 +118,8 @@ export class RoomManager {
         avatarIndex,
         playerCount: room.mode.playerCount,
         aiCount: room.mode.aiCount,
+        humanCount: room.mode.humanCount,
+        variant: room.mode.variant,
       })
       const aiPlayerRecord: Player = {
         id: aiId,
@@ -131,13 +148,24 @@ export class RoomManager {
     // 傳給前端的 players 不含 isAI 與 lobbyName，避免遊戲中洩漏自訂名稱。
     const publicPlayers = room.players.map(({ isAI: _isAI, lobbyName: _lobbyName, ...p }) => p)
 
+    const isFindHuman = room.mode.variant === 'find_human'
+    const humanPlayers = room.players.filter(p => !room.aiPlayerIds.includes(p.id))
+
     for (const player of room.players) {
+      const isHuman = !room.aiPlayerIds.includes(player.id)
+      // 找出人類模式：只告訴真人自己是真人，並讓真人知道其他真人隊友（可合作）
+      const youAreHuman = isFindHuman ? isHuman : undefined
+      const humanAllies = isFindHuman && isHuman
+        ? humanPlayers.filter(p => p.id !== player.id).map(p => p.gameName)
+        : undefined
       io.to(player.id).emit(EVENTS.GAME_START, {
         roomId: room.code,
         players: publicPlayers,
         yourId: player.id,
         mode: room.mode,
         round: 1,
+        youAreHuman,
+        humanAllies,
       })
     }
 

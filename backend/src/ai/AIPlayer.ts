@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { Message, Player } from '../game/GameTypes'
+import { Message, Player, GameVariant } from '../game/GameTypes'
 import { buildSystemPrompt, buildChatPrompt, buildVotePrompt, AI_PERSONAS } from './AIPrompts'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -8,6 +8,7 @@ export class AIPlayer {
   readonly id: string
   name: string
   avatarIndex: number
+  private variant: GameVariant
   private systemPrompt: string
   private chatSchedule?: ReturnType<typeof setTimeout>
 
@@ -17,13 +18,18 @@ export class AIPlayer {
     avatarIndex: number
     playerCount: number
     aiCount: number
+    humanCount: number
+    variant: GameVariant
   }) {
     this.id = params.id
     this.name = params.name
     this.avatarIndex = params.avatarIndex
+    this.variant = params.variant
     this.systemPrompt = buildSystemPrompt({
+      variant: params.variant,
       playerCount: params.playerCount,
       aiCount: params.aiCount,
+      humanCount: params.humanCount,
       persona: AI_PERSONAS[Math.floor(Math.random() * AI_PERSONAS.length)],
     })
   }
@@ -71,7 +77,7 @@ export class AIPlayer {
         max_tokens: 100,
         system: this.systemPrompt,
         messages: [
-          { role: 'user', content: buildChatPrompt(chatHistory, this.name) }
+          { role: 'user', content: buildChatPrompt(chatHistory, this.name, this.variant) }
         ],
       })
       const block = res.content[0]
@@ -100,7 +106,7 @@ export class AIPlayer {
         messages: [
           {
             role: 'user',
-            content: buildVotePrompt(chatHistory, candidates, aiTeamIds, this.id),
+            content: buildVotePrompt(chatHistory, candidates, aiTeamIds, this.id, this.variant),
           },
         ],
       })

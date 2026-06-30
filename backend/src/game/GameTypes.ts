@@ -1,8 +1,11 @@
+export type GameVariant = 'find_ai' | 'find_human'
+
 export interface ModeConfig {
-  playerCount: 4 | 6 | 8
+  playerCount: number
   humanCount: number
   aiCount: number
   totalRounds: number
+  variant: GameVariant
 }
 
 export interface Player {
@@ -30,7 +33,12 @@ export interface Message {
 export type GamePhase = 'waiting' | 'chat' | 'vote' | 'result' | 'ended'
 
 export type GameResult = 'humans_win' | 'ai_wins'
-export type EndReason = 'all_ai_found' | 'rounds_exhausted' | 'humans_eliminated'
+export type EndReason =
+  | 'all_ai_found'        // 找出AI：AI 全被揪出（真人勝）
+  | 'humans_eliminated'   // 找出AI：真人被淘汰光（AI 勝）
+  | 'all_humans_found'    // 找出人類：人類全被投出（AI 勝）
+  | 'all_ai_eliminated'   // 找出人類：AI 全被投出（真人勝）
+  | 'rounds_exhausted'    // 回合用完（依玩法決定誰勝）
 
 export interface GameEndResult {
   result: GameResult

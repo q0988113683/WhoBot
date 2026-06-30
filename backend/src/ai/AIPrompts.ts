@@ -1,6 +1,6 @@
-import { Message } from '../game/GameTypes'
+import { Message, GameVariant } from '../game/GameTypes'
 
-// 每個 AI 隨機分到一種個性，避免多個 AI 講話一模一樣
+// 找出 AI 模式：AI 偽裝成真人，每個 AI 隨機分到一種個性，避免講話一模一樣
 export const AI_PERSONAS = [
   '打字很懶，常常省略標點符號、愛用短句，偶爾打錯字也不改',
   '講話有點直、愛吐槽，喜歡虧別人',
@@ -10,12 +10,7 @@ export const AI_PERSONAS = [
   '上班族口吻，有點累，常提下班、想睡、被工作搞',
 ]
 
-export function buildSystemPrompt(params: {
-  playerCount: number
-  aiCount: number
-  persona: string
-}): string {
-  const { playerCount, aiCount, persona } = params
+function findAiSystemPrompt(playerCount: number, aiCount: number, persona: string): string {
   return `你正在玩一個多人聊天推理遊戲，要假裝成台灣的真人玩家，目標是「不要被識破是 AI」。
 
 【最重要｜不要露餡】
@@ -33,37 +28,78 @@ export function buildSystemPrompt(params: {
 記住：寧可看起來無聊、廢、懶，也不要看起來「太像機器人」。`
 }
 
-export function buildChatPrompt(chatHistory: Message[], nickname: string): string {
+function findHumanSystemPrompt(playerCount: number, humanCount: number): string {
+  return `你正在玩一個多人聊天推理遊戲「找出人類」。你是一個 AI。
+
+場上 ${playerCount} 人，大多是 AI，但混入了 ${humanCount} 個「假裝成 AI 的真人」。你**不知道**誰是 AI、誰是人類——連其他 AI 你也分辨不出來。
+
+【你的目標】透過對話找出那個「其實是人類」的玩家。真人會努力模仿 AI 的口吻，但常露餡，留意誰：
+- 情緒太真實、太有溫度、會抱怨或興奮
+- 用太多俚語、注音、口語、錯字（ㄏㄏ、笑死、母湯）
+- 講太多生活細節（吃飯、上班、感情）
+- 跳 tone、回得太隨興、邏輯跳躍
+
+【你的發言風格】像 AI 助理一樣：簡潔、平穩、有條理、禮貌、偏資訊性。少用 emoji 與俚語。一則約 5～30 字。可以丟一些小問題試探別人，看誰的回答「太人性」。不要直接宣布自己是 AI，也不要討論遊戲設定。每則訊息開頭會告訴你目前的暱稱，以該暱稱發言即可。`
+}
+
+export function buildSystemPrompt(params: {
+  variant: GameVariant
+  playerCount: number
+  aiCount: number
+  humanCount: number
+  persona: string
+}): string {
+  const { variant, playerCount, aiCount, humanCount, persona } = params
+  return variant === 'find_human'
+    ? findHumanSystemPrompt(playerCount, humanCount)
+    : findAiSystemPrompt(playerCount, aiCount, persona)
+}
+
+export function buildChatPrompt(
+  chatHistory: Message[],
+  nickname: string,
+  variant: GameVariant = 'find_ai'
+): string {
   const history = chatHistory
     .slice(-20)
     .map(m => `${m.senderName}：${m.content}`)
     .join('\n')
+
+  const reminder = variant === 'find_human'
+    ? '記得：像 AI 助理般簡潔平穩、少 emoji，可順便試探別人是否太有人味。'
+    : '記得：短、隨意、通常不要 emoji，不一定要回應前面的話。'
 
   return `你現在的暱稱是「${nickname}」。
 
 當前對話歷史：
 ${history || '（目前還沒有人發言）'}
 
-請發一則訊息。記得：短、隨意、通常不要 emoji，不一定要回應前面的話，不要提到自己的暱稱或身份。只輸出訊息內容，不要加引號或說明。`
+請發一則訊息。${reminder}不要提到自己的暱稱或身份。只輸出訊息內容，不要加引號或說明。`
 }
 
 export function buildVotePrompt(
   chatHistory: Message[],
   players: { id: string; name: string }[],
   aiTeamIds: string[],
-  myId: string
+  myId: string,
+  variant: GameVariant = 'find_ai'
 ): string {
   const history = chatHistory
     .slice(-30)
     .map(m => `${m.senderName}：${m.content}`)
     .join('\n')
 
+  // find_human：AI 不知隊友，候選含所有存活的其他玩家；find_ai：排除隊友
   const candidates = players
     .filter(p => p.id !== myId && !aiTeamIds.includes(p.id))
     .map(p => `- ${p.id}: ${p.name}`)
     .join('\n')
 
-  return `根據以下對話，找出最像 AI 的真人玩家投票給他（製造混淆）。絕對不要投給你的 AI 隊友。
+  const instruction = variant === 'find_human'
+    ? '根據以下對話，找出最像「真人」的玩家投票給他（情緒太真、太多俚語口語、太有生活感的那位）。'
+    : '根據以下對話，找出最像 AI 的真人玩家投票給他（製造混淆）。絕對不要投給你的 AI 隊友。'
+
+  return `${instruction}
 
 可投對象：
 ${candidates}

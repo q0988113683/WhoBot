@@ -6,6 +6,7 @@ import cors from 'cors'
 import { RoomManager } from './room/RoomManager'
 import { EVENTS } from './events/SocketEvents'
 import { Room } from './room/RoomTypes'
+import { GameVariant } from './game/GameTypes'
 import { initDb } from './db/init'
 import { upsertUser, getLeaderboard, getUserRank } from './db/queries'
 
@@ -59,8 +60,12 @@ io.on('connection', (socket) => {
   })
 
   // 建立房間
-  socket.on(EVENTS.CREATE_ROOM, ({ name, nickname, mode }: { name?: string; nickname?: string; mode: 4 | 6 | 8 }) => {
-    const room = roomManager.createRoom(socket.id, name ?? nickname ?? '玩家', mode, socketToUser.get(socket.id))
+  socket.on(EVENTS.CREATE_ROOM, ({ name, nickname, mode, variant }: { name?: string; nickname?: string; mode: number; variant?: GameVariant }) => {
+    const room = roomManager.createRoom(socket.id, name ?? nickname ?? '玩家', mode, variant ?? 'find_ai', socketToUser.get(socket.id))
+    if (!room) {
+      socket.emit(EVENTS.ERROR, { message: '無效的遊戲模式' })
+      return
+    }
     socket.join(room.code)
     socket.emit(EVENTS.ROOM_CREATED, { roomCode: room.code, mode: room.mode })
     emitLobbyUpdate(room)
@@ -78,8 +83,12 @@ io.on('connection', (socket) => {
   })
 
   // 快速配對
-  socket.on(EVENTS.QUICK_MATCH, ({ name, nickname, mode }: { name?: string; nickname?: string; mode: 4 | 6 | 8 }) => {
-    const room = roomManager.quickMatch(socket.id, name ?? nickname ?? '玩家', mode, socketToUser.get(socket.id))
+  socket.on(EVENTS.QUICK_MATCH, ({ name, nickname, mode, variant }: { name?: string; nickname?: string; mode: number; variant?: GameVariant }) => {
+    const room = roomManager.quickMatch(socket.id, name ?? nickname ?? '玩家', mode, variant ?? 'find_ai', socketToUser.get(socket.id))
+    if (!room) {
+      socket.emit(EVENTS.ERROR, { message: '無效的遊戲模式' })
+      return
+    }
     socket.join(room.code)
     socket.emit(EVENTS.ROOM_CREATED, { roomCode: room.code, mode: room.mode })
     emitLobbyUpdate(room)

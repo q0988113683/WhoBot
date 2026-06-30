@@ -7,6 +7,7 @@ import { VoteManager } from './VoteManager'
 import { EVENTS } from '../events/SocketEvents'
 import { AIPlayer } from '../ai/AIPlayer'
 import { HostMessages } from './HostMessages'
+import { evaluateWin } from './winCondition'
 import { recordVotes, incrementGamesPlayed, saveGameSession } from '../db/queries'
 
 export class GameEngine {
@@ -85,11 +86,14 @@ export class GameEngine {
       timeLimit: VOTE_DURATION,
     })
     this.io.to(room.code).emit(EVENTS.HOST_MESSAGE, {
-      text: HostMessages.voteStart(room.round, room.mode.totalRounds),
+      text: HostMessages.voteStart(room.round, room.mode.totalRounds, room.mode.variant),
       kind: 'vote_start',
       emphasis: true,
     })
     this.io.to(room.code).emit(EVENTS.TIMER_UPDATE, { phase: 'vote', secondsLeft })
+
+    // 找出人類模式：AI 不知道隊友，投票候選含所有人（傳空陣列）
+    const teamIds = room.mode.variant === 'find_human' ? [] : room.aiPlayerIds
 
     // AI 投票
     for (const aiId of room.aiPlayerIds) {
@@ -99,7 +103,7 @@ export class GameEngine {
       setTimeout(async () => {
         if (room.phase !== 'vote') return
         const alivePlayers = room.players.filter(p => !p.isEliminated)
-        const targetId = await ai.vote(room.chatHistory, alivePlayers, room.aiPlayerIds)
+        const targetId = await ai.vote(room.chatHistory, alivePlayers, teamIds)
         if (targetId) {
           this.voteManager.castVote(room, aiId, targetId)
           this.io.to(room.code).emit(EVENTS.VOTE_UPDATE, {
@@ -138,16 +142,17 @@ export class GameEngine {
     clearInterval(room.timerInterval)
     room.phase = 'result'
 
-    // 記錄真人這回合的投票到排行榜（best-effort，不阻塞遊戲）
+    const isFindHuman = room.mode.variant === 'find_human'
+
+    // 記錄真人這回合的投票到排行榜（best-effort）。
+    // 「猜中」= 投到被獵殺隊伍：找出AI→投到AI；找出人類→投到人類。
     const voteEntries = [...room.votes.entries()]
       .map(([voterId, targetId]) => {
         const voter = room.players.find(p => p.id === voterId)
         if (!voter?.userId) return null
-        return {
-          userId: voter.userId,
-          targetIsAi: room.aiPlayerIds.includes(targetId),
-          round: room.round,
-        }
+        const targetIsAi = room.aiPlayerIds.includes(targetId)
+        const correct = isFindHuman ? !targetIsAi : targetIsAi
+        return { userId: voter.userId, targetIsAi: correct, round: room.round }
       })
       .filter((e): e is { userId: string; targetIsAi: boolean; round: number } => e !== null)
     void recordVotes(voteEntries)
@@ -160,20 +165,31 @@ export class GameEngine {
     const aliveAI = room.players.filter(
       p => !p.isEliminated && room.aiPlayerIds.includes(p.id)
     )
+    const aliveHumans = room.players.filter(
+      p => !p.isEliminated && !room.aiPlayerIds.includes(p.id)
+    )
+    const huntedRemaining = isFindHuman ? aliveHumans.length : aliveAI.length
+    const eliminatedIsAi = eliminated ? room.aiPlayerIds.includes(eliminated.id) : false
+    const eliminatedWasHunted = eliminated ? (isFindHuman ? !eliminatedIsAi : eliminatedIsAi) : false
 
     this.io.to(room.code).emit(EVENTS.ROUND_RESULT, {
       eliminated: eliminated ?? null,
-      wasAI: eliminated ? room.aiPlayerIds.includes(eliminated.id) : false,
+      wasAI: eliminatedIsAi,
       round: room.round,
       aiRemaining: aliveAI.length,
       aiTotal: room.mode.aiCount,
+      // 找出人類模式用：被淘汰者是否為「被獵殺隊伍」、被獵殺隊伍剩餘數
+      variant: room.mode.variant,
+      eliminatedWasHunted,
+      huntedRemaining,
     })
     if (eliminated) {
       this.io.to(room.code).emit(EVENTS.HOST_MESSAGE, {
         text: HostMessages.roundResult(
           eliminated.name,
-          room.aiPlayerIds.includes(eliminated.id),
-          aliveAI.length
+          eliminatedWasHunted,
+          huntedRemaining,
+          room.mode.variant
         ),
         kind: 'result',
         emphasis: true,
@@ -197,7 +213,7 @@ export class GameEngine {
         reveal: revealedPlayers,
       })
       this.io.to(room.code).emit(EVENTS.HOST_MESSAGE, {
-        text: HostMessages.gameOver(result.result, result.reason),
+        text: HostMessages.gameOver(result.result, result.reason, room.mode.variant),
         kind: 'game_over',
         emphasis: true,
       })
@@ -223,18 +239,12 @@ export class GameEngine {
 
   private evaluateEnd(room: Room): GameEndResult | null {
     const alive = room.players.filter(p => !p.isEliminated)
-    const aliveAI = alive.filter(p => room.aiPlayerIds.includes(p.id))
-    const aliveHumans = alive.filter(p => !room.aiPlayerIds.includes(p.id))
-
-    if (aliveAI.length === 0) {
-      return { result: 'humans_win', reason: 'all_ai_found' }
-    }
-    if (aliveHumans.length === 0) {
-      return { result: 'ai_wins', reason: 'humans_eliminated' }
-    }
-    if (room.round >= room.mode.totalRounds) {
-      return { result: 'ai_wins', reason: 'rounds_exhausted' }
-    }
-    return null
+    return evaluateWin({
+      variant: room.mode.variant,
+      aliveAI: alive.filter(p => room.aiPlayerIds.includes(p.id)).length,
+      aliveHumans: alive.filter(p => !room.aiPlayerIds.includes(p.id)).length,
+      round: room.round,
+      totalRounds: room.mode.totalRounds,
+    })
   }
 }
