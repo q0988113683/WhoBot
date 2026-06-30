@@ -134,7 +134,12 @@ class SocketService {
     });
 
     _socket.on('error', (data) {
-      // 可顯示 snackbar
+      try {
+        final d = Map<String, dynamic>.from(data as Map);
+        state.setError(d['message'] as String? ?? '發生錯誤，請再試一次');
+      } catch (_) {
+        state.setError('發生錯誤，請再試一次');
+      }
     });
   }
 

@@ -156,6 +156,18 @@ class GameState extends ChangeNotifier {
 
   GamePhase screen = GamePhase.home;
 
+  // 錯誤提示（由 socket error 事件設定，UI 顯示後清除）
+  String? errorMessage;
+
+  void setError(String msg) {
+    errorMessage = msg;
+    notifyListeners();
+  }
+
+  void clearError() {
+    errorMessage = null;
+  }
+
   void regenNickname() {
     setNickname(_genNickname());
   }

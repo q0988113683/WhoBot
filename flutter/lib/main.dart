@@ -45,12 +45,35 @@ class WhoBotApp extends StatelessWidget {
   }
 }
 
-class _RootNavigator extends StatelessWidget {
+class _RootNavigator extends StatefulWidget {
   const _RootNavigator();
 
   @override
+  State<_RootNavigator> createState() => _RootNavigatorState();
+}
+
+class _RootNavigatorState extends State<_RootNavigator> {
+  @override
   Widget build(BuildContext context) {
-    final screen = context.watch<GameState>().screen;
+    final state = context.watch<GameState>();
+
+    // 顯示 socket 傳來的錯誤（例如房間不存在）
+    final err = state.errorMessage;
+    if (err != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(SnackBar(
+            content: Text(err),
+            backgroundColor: AppColors.danger,
+            behavior: SnackBarBehavior.floating,
+          ));
+        state.clearError();
+      });
+    }
+
+    final screen = state.screen;
     return switch (screen) {
       GamePhase.home => const HomeScreen(),
       GamePhase.modeSelect => const HomeScreen(),
