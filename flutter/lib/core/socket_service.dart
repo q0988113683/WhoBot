@@ -16,6 +16,21 @@ class SocketService {
 
     _socket.onConnect((_) {
       state.mySocketId = _socket.id ?? '';
+      // 連線後送出裝置身份，供排行榜統計
+      if (state.deviceId.isNotEmpty) {
+        _socket.emit('identify', {
+          'deviceId': state.deviceId,
+          'nickname': state.nickname,
+        });
+      }
+    });
+
+    _socket.on('leaderboard_data', (data) {
+      final d = Map<String, dynamic>.from(data as Map);
+      final entries = (d['entries'] as List)
+          .map((e) => LeaderboardEntry.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+      state.setLeaderboard(entries, d['myRank'] as int?);
     });
 
     _socket.on('lobby_update', (data) {
@@ -165,6 +180,10 @@ class SocketService {
 
   void castVote(String targetId) {
     _socket.emit('cast_vote', {'targetId': targetId});
+  }
+
+  void getLeaderboard({int limit = 50}) {
+    _socket.emit('get_leaderboard', {'limit': limit});
   }
 
   void disconnect() {

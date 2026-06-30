@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'prefs.dart';
 
 class PlayerModel {
   final String id;
@@ -110,7 +111,34 @@ class ModeConfig {
       );
 }
 
-enum GamePhase { home, modeSelect, lobby, chat, vote, result }
+class LeaderboardEntry {
+  final int rank;
+  final String nickname;
+  final int correctVotes;
+  final int totalVotes;
+  final double winRate;
+  final int gamesPlayed;
+
+  const LeaderboardEntry({
+    required this.rank,
+    required this.nickname,
+    required this.correctVotes,
+    required this.totalVotes,
+    required this.winRate,
+    required this.gamesPlayed,
+  });
+
+  factory LeaderboardEntry.fromJson(Map<String, dynamic> j) => LeaderboardEntry(
+        rank: j['rank'] as int? ?? 0,
+        nickname: j['nickname'] as String? ?? '玩家',
+        correctVotes: j['correctVotes'] as int? ?? 0,
+        totalVotes: j['totalVotes'] as int? ?? 0,
+        winRate: (j['winRate'] as num?)?.toDouble() ?? 0,
+        gamesPlayed: j['gamesPlayed'] as int? ?? 0,
+      );
+}
+
+enum GamePhase { home, modeSelect, lobby, chat, vote, result, leaderboard }
 
 class GameState extends ChangeNotifier {
   // 玩家自己的 socket id（由 socket_service 設定）
@@ -155,6 +183,14 @@ class GameState extends ChangeNotifier {
   List<PlayerModel> revealPlayers = [];
 
   GamePhase screen = GamePhase.home;
+  GamePhase _prevScreen = GamePhase.home;
+
+  // 身份與排行榜
+  Prefs? prefs;
+  String deviceId = '';
+  List<LeaderboardEntry> leaderboard = [];
+  int? myRank;
+  bool leaderboardLoading = false;
 
   // 錯誤提示（由 socket error 事件設定，UI 顯示後清除）
   String? errorMessage;
@@ -175,11 +211,26 @@ class GameState extends ChangeNotifier {
   void setNickname(String value) {
     final trimmed = value.trim();
     nickname = trimmed.length > 10 ? trimmed.substring(0, 10) : trimmed;
+    if (nickname.isNotEmpty) prefs?.saveNickname(nickname);
     notifyListeners();
   }
 
   void setScreen(GamePhase s) {
+    if (s == GamePhase.leaderboard) _prevScreen = screen;
     screen = s;
+    notifyListeners();
+  }
+
+  // 排行榜看完返回原畫面（首頁或結算）
+  void closeLeaderboard() {
+    screen = _prevScreen == GamePhase.leaderboard ? GamePhase.home : _prevScreen;
+    notifyListeners();
+  }
+
+  void setLeaderboard(List<LeaderboardEntry> entries, int? rank) {
+    leaderboard = entries;
+    myRank = rank;
+    leaderboardLoading = false;
     notifyListeners();
   }
 

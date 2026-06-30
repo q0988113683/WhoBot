@@ -206,6 +206,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 14),
+                    TextButton.icon(
+                      onPressed: () =>
+                          context.read<GameState>().setScreen(GamePhase.leaderboard),
+                      icon: const Icon(Icons.emoji_events_outlined, size: 18),
+                      label: const Text('查看排行榜'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primaryLight,
+                      ),
+                    ),
                   ],
                 ),
               ),

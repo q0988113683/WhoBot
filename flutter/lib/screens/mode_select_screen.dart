@@ -46,9 +46,36 @@ class _ModeSelectScreenState extends State<ModeSelectScreen> {
             const Spacer(),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
+              child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () {
+                  final state = context.read<GameState>();
+                  context.read<SocketService>().quickMatch(
+                        state.nickname,
+                        _selected,
+                      );
+                  Navigator.pop(context);
+                },
+                icon: const Icon(Icons.bolt, size: 20, color: Colors.white),
+                label: const Text('快速配對',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.textPrimary,
+                  side: const BorderSide(color: AppColors.border),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
@@ -61,11 +88,9 @@ class _ModeSelectScreenState extends State<ModeSelectScreen> {
                       );
                   Navigator.pop(context);
                 },
-                child: const Text('建立房間',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600)),
+                icon: const Icon(Icons.add_circle_outline, size: 20),
+                label: const Text('建立私人房間（分享代碼）',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
               ),
             ),
           ],

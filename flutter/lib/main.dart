@@ -3,14 +3,24 @@ import 'package:provider/provider.dart';
 import 'core/constants.dart';
 import 'core/game_state.dart';
 import 'core/socket_service.dart';
+import 'core/prefs.dart';
 import 'screens/home_screen.dart';
 import 'screens/lobby_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/vote_screen.dart';
 import 'screens/result_screen.dart';
+import 'screens/leaderboard_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
   final state = GameState();
+  final prefs = await Prefs.load();
+  state.prefs = prefs;
+  state.deviceId = prefs.deviceId();
+  final savedNick = prefs.savedNickname();
+  if (savedNick != null && savedNick.isNotEmpty) state.nickname = savedNick;
+
   final socket = SocketService(state);
   socket.connect();
 
@@ -81,6 +91,7 @@ class _RootNavigatorState extends State<_RootNavigator> {
       GamePhase.chat => const ChatScreen(),
       GamePhase.vote => const VoteScreen(),
       GamePhase.result => const ResultScreen(),
+      GamePhase.leaderboard => const LeaderboardScreen(),
     };
   }
 }
