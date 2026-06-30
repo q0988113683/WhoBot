@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { Message, Player } from '../game/GameTypes'
-import { buildSystemPrompt, buildChatPrompt, buildVotePrompt } from './AIPrompts'
+import { buildSystemPrompt, buildChatPrompt, buildVotePrompt, AI_PERSONAS } from './AIPrompts'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -25,6 +25,7 @@ export class AIPlayer {
       playerCount: params.playerCount,
       aiCount: params.aiCount,
       nickname: params.name,
+      persona: AI_PERSONAS[Math.floor(Math.random() * AI_PERSONAS.length)],
     })
   }
 
